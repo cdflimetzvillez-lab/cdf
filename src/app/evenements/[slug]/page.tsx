@@ -101,7 +101,7 @@ export default async function PageEvenement(
           <div className="keys">
             <div className="key">
               <div className="k">Date</div>
-              <div className="v">{jm.jour}<br />{jm.date}</div>
+              <div className="v">{jm.jour} {jm.date}</div>
             </div>
             <div className="key">
               <div className="k">Horaires</div>

@@ -669,3 +669,7 @@ footer a:hover{color:var(--jaune);}
   .prog-avec-affiche{grid-template-columns:1fr;gap:2rem;}
   .prog-affiche{position:static;max-width:340px;margin:0 auto;}
 }
+
+/* une seule ligne par valeur dans le bandeau d'infos */
+.key .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.key .v small{white-space:normal;}
