@@ -33,7 +33,16 @@ export default function LigneReservation({ resa }: { resa: any }) {
           )}
         </td>
         <td style={{ fontSize: '.85rem' }}>{resa.evenements?.titre}</td>
-        <td>{resa.places}</td>
+        <td>
+          {resa.places}
+          {resa.reservation_lignes?.length > 1 && (
+            <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
+              {resa.reservation_lignes.map((l: any, i: number) => (
+                <div key={i}>{l.quantite}× {l.libelle}</div>
+              ))}
+            </div>
+          )}
+        </td>
         <td>{euros(resa.montant_centimes)}</td>
         <td>
           <code style={{ fontSize: '.8rem', fontWeight: 700 }}>{resa.code_billet}</code>

@@ -7,6 +7,7 @@ export type Document = {
   titre: string;
   legende: string;
   type: 'image' | 'pdf';
+  est_affiche?: boolean;
 };
 
 const TAILLE_MAX = 8 * 1024 * 1024; // 8 Mo
@@ -53,6 +54,7 @@ export default function ChampDocuments({
           titre: fichier.name.replace(/\.[^.]+$/, ''),
           legende: '',
           type: fichier.type === 'application/pdf' ? 'pdf' : 'image',
+          est_affiche: false,
         });
       } catch (e: any) {
         console.error('[documents]', e);
@@ -72,6 +74,11 @@ export default function ChampDocuments({
     setDocs((d) => d.map((doc, j) => (j === i ? { ...doc, [champ]: valeur } : doc)));
   }
 
+  /** Une seule affiche possible : cocher l'une décoche les autres. */
+  function designerAffiche(i: number) {
+    setDocs((d) => d.map((doc, j) => ({ ...doc, est_affiche: j === i ? !doc.est_affiche : false })));
+  }
+
   function deplacer(i: number, sens: -1 | 1) {
     const j = i + sens;
     if (j < 0 || j >= docs.length) return;
@@ -88,6 +95,7 @@ export default function ChampDocuments({
         <div key={doc.url} className="doc-ligne">
           <input type="hidden" name="doc_url" value={doc.url} />
           <input type="hidden" name="doc_type" value={doc.type} />
+          <input type="hidden" name="doc_affiche" value={doc.est_affiche ? '1' : '0'} />
 
           <div className="doc-vignette">
             {doc.type === 'pdf' ? (
@@ -105,12 +113,19 @@ export default function ChampDocuments({
                 onChange={(e) => modifier(i, 'titre', e.target.value)}
                 placeholder="Affiche de la soirée" />
             </div>
-            <div className="field" style={{ marginBottom: 0 }}>
+            <div className="field" style={{ marginBottom: '.5rem' }}>
               <label>Légende (facultatif)</label>
               <input name="doc_legende" value={doc.legende}
                 onChange={(e) => modifier(i, 'legende', e.target.value)}
                 placeholder="Menu complet, tarifs inclus" />
             </div>
+            {doc.type === 'image' && (
+              <label className="doc-affiche">
+                <input type="checkbox" checked={!!doc.est_affiche}
+                  onChange={() => designerAffiche(i)} />
+                Affiche principale — montrée à côté du programme
+              </label>
+            )}
           </div>
 
           <div className="doc-actions">

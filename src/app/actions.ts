@@ -179,6 +179,22 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
     .filter((f) => f.question && f.reponse);
   if (faq.length) await supabase.from('faq').insert(faq);
 
+  // --- tarifs ---
+  await supabase.from('tarifs').delete().eq('evenement_id', evenementId);
+  const tLibelles = fd.getAll('tarif_libelle').map(String);
+  const tPrix     = fd.getAll('tarif_prix').map(String);
+  const tDescr    = fd.getAll('tarif_description').map(String);
+  const tarifs = tLibelles
+    .map((libelle, i) => ({
+      evenement_id: evenementId,
+      libelle: libelle.trim(),
+      description: (tDescr[i] ?? '').trim() || null,
+      prix_centimes: Math.round(Number(tPrix[i] ?? 0) * 100),
+      position: i + 1,
+    }))
+    .filter((t) => t.libelle);
+  if (tarifs.length) await supabase.from('tarifs').insert(tarifs);
+
   // --- documents (affiches, menus, photos) ---
   await supabase.from('documents').delete().eq('evenement_id', evenementId);
   const dUrls     = fd.getAll('doc_url').map(String);

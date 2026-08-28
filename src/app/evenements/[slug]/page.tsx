@@ -53,12 +53,13 @@ export default async function PageEvenement(
   if (!evt) notFound();
   const e = evt as Evenement;
 
-  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents },
+  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents }, { data: tarifs },
          { data: autres }, { data: settings }] = await Promise.all([
     supabase.from('creneaux').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('infos').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('faq').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('documents').select('*').eq('evenement_id', e.id).order('position'),
+    supabase.from('tarifs').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('evenements').select('*').eq('publie', true).neq('id', e.id).order('position'),
     supabase.from('site_settings').select('*').eq('id', 1).single(),
   ]);
@@ -101,7 +102,14 @@ export default async function PageEvenement(
             </div>
             <div className="key">
               <div className="k">Tarif</div>
-              <div className="v">{e.tarif}</div>
+              <div className="v">
+                {e.billetterie_active && prixMini > 0 ? (
+                  <>
+                    {plusieursTarifs && <small>À partir de</small>}
+                    {euros(prixMini)}
+                  </>
+                ) : e.tarif}
+              </div>
             </div>
           </div>
 
@@ -171,6 +179,7 @@ export default async function PageEvenement(
             </div>
             <FormulaireReservation
               evenementId={e.id}
+              tarifs={grilleTarifs}
               prixCentimes={e.prix_centimes}
               placesMax={e.places_par_reservation}
               placesRestantes={placesRestantes as number | null}

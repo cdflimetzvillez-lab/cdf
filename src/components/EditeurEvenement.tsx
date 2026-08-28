@@ -5,6 +5,7 @@ import { enregistrerEvenement, type ActionState } from '@/app/actions';
 import ChampImage from '@/components/ChampImage';
 import ChampDocuments, { type Document } from '@/components/ChampDocuments';
 import type { Evenement, Creneau, InfoBloc, FaqItem } from '@/lib/types';
+export type Tarif = { libelle: string; description: string; prix_euros: string };
 
 type Props = {
   evenement: Partial<Evenement> | null;
@@ -12,13 +13,14 @@ type Props = {
   infos: InfoBloc[];
   faq: FaqItem[];
   documents?: Document[];
+  tarifs?: Tarif[];
 };
 
 const VIDE_CRENEAU = { heure: '', titre: '', description: '', scene: '' };
 const VIDE_INFO = { titre: '', lignes: '' };
 const VIDE_FAQ = { question: '', reponse: '' };
 
-export default function EditeurEvenement({ evenement, creneaux, infos, faq, documents = [] }: Props) {
+export default function EditeurEvenement({ evenement, creneaux, infos, faq, documents = [], tarifs = [] }: Props) {
   const [state, action, pending] = useActionState<ActionState, FormData>(enregistrerEvenement, null);
   const e = evenement ?? {};
 
@@ -34,6 +36,13 @@ export default function EditeurEvenement({ evenement, creneaux, infos, faq, docu
     faq.length ? faq.map((f) => ({ question: f.question, reponse: f.reponse })) : [VIDE_FAQ]
   );
   const [couleur, setCouleur] = useState(e.couleur ?? '#FF3D7F');
+  const [lsTarifs, setTarifs] = useState<Tarif[]>(
+    tarifs.length ? tarifs : [{ libelle: '', description: '', prix_euros: '' }]
+  );
+
+  function majTarif(i: number, champ: keyof Tarif, valeur: string) {
+    setTarifs((t) => t.map((x, j) => (j === i ? { ...x, [champ]: valeur } : x)));
+  }
 
   return (
     <form action={action}>
@@ -195,6 +204,51 @@ export default function EditeurEvenement({ evenement, creneaux, infos, faq, docu
               defaultValue={e.libelle_reservation ?? 'Réserver'} />
           </div>
         </div>
+      </div>
+
+      {/* ---------- Tarifs ---------- */}
+      <div className="panel">
+        <h2>Grille tarifaire</h2>
+        <p style={{ color: '#6b6560', fontSize: '.88rem', marginBottom: '1.2rem' }}>
+          Un seul tarif, ou plusieurs (adulte, enfant, membre…). Le plus bas
+          s&apos;affiche en « à partir de » sur la page. Laissez vide pour un
+          événement gratuit.
+        </p>
+
+        {lsTarifs.map((t, i) => (
+          <div className="repeat-item" key={i}>
+            <div className="row3">
+              <div className="field">
+                <label>Libellé</label>
+                <input name="tarif_libelle" value={t.libelle}
+                  onChange={(ev) => majTarif(i, 'libelle', ev.target.value)}
+                  placeholder="Adulte" />
+              </div>
+              <div className="field">
+                <label>Prix (€)</label>
+                <input name="tarif_prix" type="number" step="0.01" min="0"
+                  value={t.prix_euros}
+                  onChange={(ev) => majTarif(i, 'prix_euros', ev.target.value)}
+                  placeholder="30" />
+              </div>
+              <div className="field">
+                <label>Précision (facultatif)</label>
+                <input name="tarif_description" value={t.description}
+                  onChange={(ev) => majTarif(i, 'description', ev.target.value)}
+                  placeholder="repas complet + soirée" />
+              </div>
+            </div>
+            <button type="button" className="btn btn-w btn-sm"
+              onClick={() => setTarifs(lsTarifs.filter((_, j) => j !== i))}>
+              Retirer ce tarif
+            </button>
+          </div>
+        ))}
+
+        <button type="button" className="btn btn-y btn-sm"
+          onClick={() => setTarifs([...lsTarifs, { libelle: '', description: '', prix_euros: '' }])}>
+          + Ajouter un tarif
+        </button>
       </div>
 
       {/* ---------- Documents ---------- */}

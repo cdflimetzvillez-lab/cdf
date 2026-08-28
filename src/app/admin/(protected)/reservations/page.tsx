@@ -21,7 +21,7 @@ export default async function Reservations({
 
   let requete = supabase
     .from('reservations')
-    .select('*, evenements(titre, slug)')
+    .select('*, evenements(titre, slug), reservation_lignes(libelle, prix_centimes, quantite)')
     .order('created_at', { ascending: false });
   if (evt) requete = requete.eq('evenement_id', evt);
 

@@ -26,12 +26,13 @@ export default async function PageEditeur(
   const { data: evt } = await supabase.from('evenements').select('*').eq('id', id).maybeSingle();
   if (!evt) notFound();
 
-  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents }] =
+  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents }, { data: tarifs }] =
     await Promise.all([
       supabase.from('creneaux').select('*').eq('evenement_id', id).order('position'),
       supabase.from('infos').select('*').eq('evenement_id', id).order('position'),
       supabase.from('faq').select('*').eq('evenement_id', id).order('position'),
       supabase.from('documents').select('*').eq('evenement_id', id).order('position'),
+      supabase.from('tarifs').select('*').eq('evenement_id', id).order('position'),
     ]);
 
   return (
@@ -48,7 +49,13 @@ export default async function PageEditeur(
         infos={(infos ?? []) as InfoBloc[]}
         faq={(faq ?? []) as FaqItem[]}
         documents={(documents ?? []).map((d: any) => ({
-          url: d.url, titre: d.titre ?? '', legende: d.legende ?? '', type: d.type,
+          url: d.url, titre: d.titre ?? '', legende: d.legende ?? '',
+          type: d.type, est_affiche: d.est_affiche,
+        }))}
+        tarifs={(tarifs ?? []).map((t: any) => ({
+          libelle: t.libelle,
+          description: t.description ?? '',
+          prix_euros: (t.prix_centimes / 100).toFixed(2),
         }))}
       />
     </>

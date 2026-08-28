@@ -1,10 +1,18 @@
 'use client';
-import { useActionState, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { reserver, type EtatResa } from '@/app/reservation-actions';
+
+export type TarifPublic = {
+  id: string;
+  libelle: string;
+  description: string | null;
+  prix_centimes: number;
+};
 
 type Props = {
   evenementId: string;
-  prixCentimes: number;
+  tarifs: TarifPublic[];
+  prixCentimes: number;        // repli si aucun tarif défini
   placesMax: number;
   placesRestantes: number | null;
   cloture: string | null;
@@ -14,14 +22,42 @@ const euros = (c: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
 
 export default function FormulaireReservation({
-  evenementId, prixCentimes, placesMax, placesRestantes, cloture,
+  evenementId, tarifs, prixCentimes, placesMax, placesRestantes, cloture,
 }: Props) {
   const [etat, action, pending] = useActionState<EtatResa, FormData>(reserver, null);
-  const [places, setPlaces] = useState(1);
+
+  // Si aucun tarif n'est saisi, on retombe sur le prix unique de l'événement.
+  const grille: TarifPublic[] = tarifs.length
+    ? tarifs
+    : [{ id: 'defaut', libelle: 'Place', description: null, prix_centimes: prixCentimes }];
+
+  const [quantites, setQuantites] = useState<Record<string, number>>(
+    Object.fromEntries(grille.map((t, i) => [t.id, i === 0 ? 1 : 0]))
+  );
 
   const complet = placesRestantes !== null && placesRestantes <= 0;
   const close = cloture ? new Date(cloture) < new Date() : false;
   const plafond = Math.min(placesMax, placesRestantes ?? placesMax);
+
+  const { total, nbPlaces } = useMemo(() => {
+    let total = 0, nbPlaces = 0;
+    grille.forEach((t) => {
+      const q = quantites[t.id] ?? 0;
+      total += t.prix_centimes * q;
+      nbPlaces += q;
+    });
+    return { total, nbPlaces };
+  }, [quantites, grille]);
+
+  function changer(id: string, delta: number) {
+    setQuantites((q) => {
+      const actuel = q[id] ?? 0;
+      const nouveau = Math.max(0, actuel + delta);
+      const autres = nbPlaces - actuel;
+      if (autres + nouveau > plafond) return q;
+      return { ...q, [id]: nouveau };
+    });
+  }
 
   if (complet) {
     return (
@@ -54,6 +90,30 @@ export default function FormulaireReservation({
 
       <input type="hidden" name="evenement_id" value={evenementId} />
 
+      {/* --- grille tarifaire --- */}
+      <div className="tarif-grille">
+        {grille.map((t) => (
+          <div className="tarif-ligne" key={t.id}>
+            <input type="hidden" name="tarif_id" value={t.id} />
+            <input type="hidden" name="tarif_qte" value={quantites[t.id] ?? 0} />
+
+            <div className="tarif-nom">
+              <strong>{t.libelle}</strong>
+              {t.description && <span>{t.description}</span>}
+              <em>{t.prix_centimes === 0 ? 'Gratuit' : euros(t.prix_centimes)}</em>
+            </div>
+
+            <div className="tarif-compteur">
+              <button type="button" onClick={() => changer(t.id, -1)}
+                disabled={(quantites[t.id] ?? 0) === 0} aria-label={`Retirer une place ${t.libelle}`}>−</button>
+              <span>{quantites[t.id] ?? 0}</span>
+              <button type="button" onClick={() => changer(t.id, 1)}
+                disabled={nbPlaces >= plafond} aria-label={`Ajouter une place ${t.libelle}`}>+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="field">
         <label htmlFor="r-nom">Nom et prénom</label>
         <input id="r-nom" name="nom" required placeholder="Marie Dupont" />
@@ -69,24 +129,10 @@ export default function FormulaireReservation({
 
       <div className="field">
         <label htmlFor="r-tel">Téléphone</label>
-        <input id="r-tel" name="telephone" type="tel" required
-          placeholder="06 12 34 56 78" />
+        <input id="r-tel" name="telephone" type="tel" required placeholder="06 12 34 56 78" />
         <small style={{ fontSize: '.72rem', color: '#6b6560' }}>
           Pour vous joindre en cas de changement de dernière minute.
         </small>
-      </div>
-
-      <div className="field">
-        <label htmlFor="r-places">Nombre de places</label>
-        <select
-          id="r-places" name="places"
-          value={places}
-          onChange={(e) => setPlaces(Number(e.target.value))}
-        >
-          {Array.from({ length: Math.max(1, plafond) }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>{n} place{n > 1 ? 's' : ''}</option>
-          ))}
-        </select>
       </div>
 
       <div className="field">
@@ -95,8 +141,8 @@ export default function FormulaireReservation({
       </div>
 
       <div className="resa-total">
-        <span>Total</span>
-        <b>{euros(prixCentimes * places)}</b>
+        <span>Total · {nbPlaces} place{nbPlaces > 1 ? 's' : ''}</span>
+        <b>{euros(total)}</b>
       </div>
 
       {placesRestantes !== null && placesRestantes <= 20 && (
@@ -106,8 +152,11 @@ export default function FormulaireReservation({
         </p>
       )}
 
-      <button className="btn btn-k" style={{ width: '100%' }} disabled={pending}>
-        {pending ? 'Redirection…' : `Payer ${euros(prixCentimes * places)}`}
+      <button className="btn btn-k" style={{ width: '100%' }}
+        disabled={pending || nbPlaces === 0}>
+        {pending ? 'Redirection…'
+          : nbPlaces === 0 ? 'Choisissez au moins une place'
+          : `Payer ${euros(total)}`}
       </button>
 
       <p style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.9rem', lineHeight: 1.5 }}>

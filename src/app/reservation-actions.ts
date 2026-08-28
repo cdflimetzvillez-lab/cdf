@@ -22,13 +22,16 @@ export async function reserver(_prev: EtatResa, fd: FormData): Promise<EtatResa>
   const email       = String(fd.get('email') ?? '').trim().toLowerCase();
   const telephone   = String(fd.get('telephone') ?? '').trim();
   const commentaire = String(fd.get('commentaire') ?? '').trim();
-  const places      = Number(fd.get('places') ?? 1);
+  // lignes de tarif : id + quantité, en parallèle
+  const tarifIds  = fd.getAll('tarif_id').map(String);
+  const tarifQtes = fd.getAll('tarif_qte').map((v) => Number(v) || 0);
+  const places    = tarifQtes.reduce((s, q) => s + q, 0);
 
   if (!nom || nom.length < 2) return { erreur: 'Merci d\u2019indiquer votre nom.' };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse email invalide.' };
   if (telephone.replace(/[\s.\-()]/g, '').length < 10)
     return { erreur: 'Merci d\u2019indiquer un numéro de téléphone valide.' };
-  if (!Number.isInteger(places) || places < 1) return { erreur: 'Nombre de places invalide.' };
+  if (places < 1) return { erreur: 'Choisissez au moins une place.' };
 
   const db = createAdminClient();
 
@@ -57,7 +60,28 @@ export async function reserver(_prev: EtatResa, fd: FormData): Promise<EtatResa>
     }
   }
 
-  const montant = evt.prix_centimes * places;
+  // Prix recalculés côté serveur : jamais de confiance au formulaire.
+  const { data: grille } = await db
+    .from('tarifs')
+    .select('id, libelle, prix_centimes')
+    .eq('evenement_id', evt.id);
+
+  const lignes: { libelle: string; prix_centimes: number; quantite: number }[] = [];
+  let montant = 0;
+
+  tarifIds.forEach((id, i) => {
+    const q = tarifQtes[i] ?? 0;
+    if (q <= 0) return;
+    const t = (grille ?? []).find((x) => x.id === id);
+    // « defaut » = événement sans grille, on prend le prix unique
+    const libelle = t?.libelle ?? 'Place';
+    const prix = t ? t.prix_centimes : evt.prix_centimes;
+    lignes.push({ libelle, prix_centimes: prix, quantite: q });
+    montant += prix * q;
+  });
+
+  if (lignes.length === 0) return { erreur: 'Choisissez au moins une place.' };
+
   const reference = genererReference();
 
   // 1. Réservation en attente
@@ -80,6 +104,11 @@ export async function reserver(_prev: EtatResa, fd: FormData): Promise<EtatResa>
     console.error('[reserver] insert', errResa);
     return { erreur: 'Impossible de créer la réservation. Réessayez dans un instant.' };
   }
+
+  // 1 bis. Détail des tarifs
+  await db.from('reservation_lignes').insert(
+    lignes.map((l) => ({ reservation_id: resa.id, ...l }))
+  );
 
   // 2. Checkout SumUp
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
