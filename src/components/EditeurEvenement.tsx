@@ -3,6 +3,7 @@ import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { enregistrerEvenement, type ActionState } from '@/app/actions';
 import ChampImage from '@/components/ChampImage';
+import ChampDocuments, { type Document } from '@/components/ChampDocuments';
 import type { Evenement, Creneau, InfoBloc, FaqItem } from '@/lib/types';
 
 type Props = {
@@ -10,13 +11,14 @@ type Props = {
   creneaux: Creneau[];
   infos: InfoBloc[];
   faq: FaqItem[];
+  documents?: Document[];
 };
 
 const VIDE_CRENEAU = { heure: '', titre: '', description: '', scene: '' };
 const VIDE_INFO = { titre: '', lignes: '' };
 const VIDE_FAQ = { question: '', reponse: '' };
 
-export default function EditeurEvenement({ evenement, creneaux, infos, faq }: Props) {
+export default function EditeurEvenement({ evenement, creneaux, infos, faq, documents = [] }: Props) {
   const [state, action, pending] = useActionState<ActionState, FormData>(enregistrerEvenement, null);
   const e = evenement ?? {};
 
@@ -193,6 +195,16 @@ export default function EditeurEvenement({ evenement, creneaux, infos, faq }: Pr
               defaultValue={e.libelle_reservation ?? 'Réserver'} />
           </div>
         </div>
+      </div>
+
+      {/* ---------- Documents ---------- */}
+      <div className="panel">
+        <h2>Affiches et documents</h2>
+        <p style={{ color: '#6b6560', fontSize: '.88rem', marginBottom: '1.2rem' }}>
+          Affiche de l&apos;événement, menu de la soirée, plan d&apos;accès, photos des
+          éditions précédentes. Images et PDF acceptés.
+        </p>
+        <ChampDocuments documentsInitiaux={documents} />
       </div>
 
       {/* ---------- Programme ---------- */}

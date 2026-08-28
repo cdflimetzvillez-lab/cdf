@@ -8,6 +8,7 @@ import Marquee from '@/components/Marquee';
 import Footer from '@/components/Footer';
 import FormulaireDemande from '@/components/FormulaireDemande';
 import FormulaireReservation from '@/components/FormulaireReservation';
+import GalerieEvenement from '@/components/GalerieEvenement';
 import { jourMois, horaires, dateLongue, periode, texteSur } from '@/lib/format';
 import type { Evenement, Creneau, InfoBloc, FaqItem, SiteSettings } from '@/lib/types';
 
@@ -52,11 +53,12 @@ export default async function PageEvenement(
   if (!evt) notFound();
   const e = evt as Evenement;
 
-  const [{ data: creneaux }, { data: infos }, { data: faq },
+  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents },
          { data: autres }, { data: settings }] = await Promise.all([
     supabase.from('creneaux').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('infos').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('faq').select('*').eq('evenement_id', e.id).order('position'),
+    supabase.from('documents').select('*').eq('evenement_id', e.id).order('position'),
     supabase.from('evenements').select('*').eq('publie', true).neq('id', e.id).order('position'),
     supabase.from('site_settings').select('*').eq('id', 1).single(),
   ]);
@@ -187,6 +189,18 @@ export default async function PageEvenement(
               </p>
             </div>
             <FormulaireDemande evenementId={e.id} />
+          </div>
+        </section>
+      )}
+
+      {documents && documents.length > 0 && (
+        <section id="documents">
+          <div className="wrap">
+            <div className="head">
+              <h2>Affiches et documents</h2>
+              <p>Cliquez pour agrandir.</p>
+            </div>
+            <GalerieEvenement documents={documents as any} />
           </div>
         </section>
       )}

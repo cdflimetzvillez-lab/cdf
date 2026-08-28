@@ -26,11 +26,13 @@ export default async function PageEditeur(
   const { data: evt } = await supabase.from('evenements').select('*').eq('id', id).maybeSingle();
   if (!evt) notFound();
 
-  const [{ data: creneaux }, { data: infos }, { data: faq }] = await Promise.all([
-    supabase.from('creneaux').select('*').eq('evenement_id', id).order('position'),
-    supabase.from('infos').select('*').eq('evenement_id', id).order('position'),
-    supabase.from('faq').select('*').eq('evenement_id', id).order('position'),
-  ]);
+  const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents }] =
+    await Promise.all([
+      supabase.from('creneaux').select('*').eq('evenement_id', id).order('position'),
+      supabase.from('infos').select('*').eq('evenement_id', id).order('position'),
+      supabase.from('faq').select('*').eq('evenement_id', id).order('position'),
+      supabase.from('documents').select('*').eq('evenement_id', id).order('position'),
+    ]);
 
   return (
     <>
@@ -45,6 +47,9 @@ export default async function PageEditeur(
         creneaux={(creneaux ?? []) as Creneau[]}
         infos={(infos ?? []) as InfoBloc[]}
         faq={(faq ?? []) as FaqItem[]}
+        documents={(documents ?? []).map((d: any) => ({
+          url: d.url, titre: d.titre ?? '', legende: d.legende ?? '', type: d.type,
+        }))}
       />
     </>
   );

@@ -549,3 +549,64 @@ footer a:hover{color:var(--jaune);}
 .jauge{height:7px;background:#e2ddd6;border:1px solid var(--noir);margin-top:.35rem;
   width:120px;}
 .jauge span{display:block;height:100%;background:var(--rose);}
+
+
+/* ---------- GALERIE, page événement ---------- */
+.galerie{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:1.4rem;}
+.gal-carte{display:block;padding:0;border:3px solid var(--noir);background:#fff;
+  box-shadow:7px 7px 0 var(--noir);cursor:pointer;text-align:left;
+  text-decoration:none;color:var(--noir);font-family:inherit;
+  transition:transform .15s,box-shadow .15s;overflow:hidden;}
+.gal-carte:hover{transform:translate(4px,4px);box-shadow:3px 3px 0 var(--noir);}
+.gal-carte img{display:block;width:100%;height:230px;object-fit:cover;}
+.gal-legende{padding:.8rem .9rem;border-top:3px solid var(--noir);background:var(--creme);}
+.gal-legende strong{display:block;font-family:'Anton',sans-serif;text-transform:uppercase;
+  font-size:1rem;line-height:1.15;}
+.gal-legende span{display:block;font-size:.8rem;color:#5a544e;margin-top:.25rem;
+  line-height:1.4;}
+.gal-pdf{display:flex;flex-direction:column;}
+.gal-badge{display:flex;align-items:center;justify-content:center;height:230px;
+  background:var(--jaune);font-family:'Anton',sans-serif;font-size:2.6rem;
+  letter-spacing:.1em;}
+
+/* visionneuse */
+.gal-visio{position:fixed;inset:0;z-index:95;background:rgba(20,16,20,.93);
+  display:flex;align-items:center;justify-content:center;padding:3rem 1.2rem;}
+.gal-visio figure{margin:0;max-width:960px;width:100%;}
+.gal-visio img{display:block;max-width:100%;max-height:76vh;margin:0 auto;
+  border:3px solid var(--creme);}
+.gal-visio figcaption{margin-top:1rem;text-align:center;color:var(--creme);}
+.gal-visio figcaption strong{display:block;font-family:'Anton',sans-serif;
+  text-transform:uppercase;font-size:1.2rem;}
+.gal-visio figcaption span{font-size:.88rem;color:#b7afa6;}
+.gal-fermer{position:absolute;top:1.4rem;right:1.6rem;background:none;border:none;
+  color:var(--jaune);font-size:2rem;cursor:pointer;line-height:1;}
+.gal-nav{position:absolute;top:50%;transform:translateY(-50%);background:var(--noir);
+  border:3px solid var(--creme);color:var(--jaune);width:54px;height:54px;
+  font-size:2rem;line-height:1;cursor:pointer;}
+.gal-prec{left:1.2rem;}
+.gal-suiv{right:1.2rem;}
+.gal-nav:hover{background:var(--jaune);color:var(--noir);}
+
+/* ---------- DOCUMENTS, éditeur admin ---------- */
+.doc-ligne{display:flex;gap:1rem;align-items:flex-start;border:2px dashed #b8b1a8;
+  background:#fbf9f6;padding:.9rem;margin-bottom:.8rem;}
+.doc-vignette{flex-shrink:0;width:88px;height:88px;border:2px solid var(--noir);
+  overflow:hidden;background:#fff;}
+.doc-vignette img{width:100%;height:100%;object-fit:cover;display:block;}
+.doc-pdf{display:flex;align-items:center;justify-content:center;width:100%;height:100%;
+  background:var(--jaune);font-family:'Anton',sans-serif;font-size:1.2rem;}
+.doc-champs{flex:1;min-width:0;}
+.doc-actions{display:flex;flex-direction:column;gap:.3rem;}
+.doc-actions button,.doc-actions a{width:34px;height:30px;border:2px solid var(--noir);
+  background:#fff;cursor:pointer;font-size:.9rem;line-height:1;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;color:var(--noir);}
+.doc-actions button:disabled{opacity:.3;cursor:not-allowed;}
+.doc-suppr{background:var(--rose)!important;color:#fff;}
+
+@media(max-width:640px){
+  .doc-ligne{flex-wrap:wrap;}
+  .doc-actions{flex-direction:row;width:100%;}
+  .gal-nav{width:44px;height:44px;font-size:1.6rem;}
+}

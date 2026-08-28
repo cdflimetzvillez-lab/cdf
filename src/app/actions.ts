@@ -179,6 +179,24 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
     .filter((f) => f.question && f.reponse);
   if (faq.length) await supabase.from('faq').insert(faq);
 
+  // --- documents (affiches, menus, photos) ---
+  await supabase.from('documents').delete().eq('evenement_id', evenementId);
+  const dUrls     = fd.getAll('doc_url').map(String);
+  const dTitres   = fd.getAll('doc_titre').map(String);
+  const dLegendes = fd.getAll('doc_legende').map(String);
+  const dTypes    = fd.getAll('doc_type').map(String);
+  const documents = dUrls
+    .map((url, i) => ({
+      evenement_id: evenementId,
+      url,
+      titre: (dTitres[i] ?? '').trim() || null,
+      legende: (dLegendes[i] ?? '').trim() || null,
+      type: dTypes[i] === 'pdf' ? 'pdf' : 'image',
+      position: i + 1,
+    }))
+    .filter((d) => d.url);
+  if (documents.length) await supabase.from('documents').insert(documents);
+
   revalidatePath('/');
   revalidatePath(`/evenements/${slug}`);
   revalidatePath('/admin/evenements');
