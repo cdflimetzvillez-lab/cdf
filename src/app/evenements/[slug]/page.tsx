@@ -72,6 +72,9 @@ export default async function PageEvenement(
 
   const jm = jourMois(e.date_debut);
   const cr = (creneaux ?? []) as Creneau[];
+  const tousDocs = (documents ?? []) as any[];
+  const affiche = tousDocs.find((d) => d.est_affiche && d.type === 'image') ?? null;
+  const autresDocs = tousDocs.filter((d) => d !== affiche);
   const grilleTarifs = (tarifs ?? []) as any[];
   const prixMini = grilleTarifs.length
     ? Math.min(...grilleTarifs.map((t) => t.prix_centimes))
@@ -142,6 +145,14 @@ export default async function PageEvenement(
               <h2>Le déroulé</h2>
               {e.description && <p>{e.description}</p>}
             </div>
+            <div className={affiche ? 'prog-avec-affiche' : ''}>
+            {affiche && (
+              <a className="prog-affiche" href={affiche.url} target="_blank" rel="noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={affiche.url} alt={affiche.titre ?? "Affiche de l'événement"} />
+                <span>Voir en grand</span>
+              </a>
+            )}
             <div className="timeline">
               {cr.map((c) => (
                 <div className="slot" key={c.id}>
@@ -151,6 +162,7 @@ export default async function PageEvenement(
                   {c.scene && <span className="stage">{c.scene}</span>}
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </section>
@@ -210,14 +222,14 @@ export default async function PageEvenement(
         </section>
       )}
 
-      {documents && documents.length > 0 && (
+      {autresDocs.length > 0 && (
         <section id="documents">
           <div className="wrap">
             <div className="head">
               <h2>Affiches et documents</h2>
               <p>Cliquez pour agrandir.</p>
             </div>
-            <GalerieEvenement documents={documents as any} />
+            <GalerieEvenement documents={autresDocs as any} />
           </div>
         </section>
       )}

@@ -201,6 +201,8 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
   const dTitres   = fd.getAll('doc_titre').map(String);
   const dLegendes = fd.getAll('doc_legende').map(String);
   const dTypes    = fd.getAll('doc_type').map(String);
+  const dAffiches = fd.getAll('doc_affiche').map(String);
+  console.log('[docs] urls=', dUrls.length, 'affiches=', dAffiches);
   const documents = dUrls
     .map((url, i) => ({
       evenement_id: evenementId,
@@ -208,6 +210,7 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
       titre: (dTitres[i] ?? '').trim() || null,
       legende: (dLegendes[i] ?? '').trim() || null,
       type: dTypes[i] === 'pdf' ? 'pdf' : 'image',
+      est_affiche: dAffiches[i] === '1',
       position: i + 1,
     }))
     .filter((d) => d.url);
