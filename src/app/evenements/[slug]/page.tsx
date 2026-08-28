@@ -72,6 +72,14 @@ export default async function PageEvenement(
 
   const jm = jourMois(e.date_debut);
   const cr = (creneaux ?? []) as Creneau[];
+  const grilleTarifs = (tarifs ?? []) as any[];
+  const prixMini = grilleTarifs.length
+    ? Math.min(...grilleTarifs.map((t) => t.prix_centimes))
+    : e.prix_centimes;
+  const plusieursTarifs = grilleTarifs.length > 1;
+  const euros = (c: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
+
 
   return (
     <div style={{ ['--evt' as string]: e.couleur, ['--evt-dark' as string]: e.couleur_sombre }}>
