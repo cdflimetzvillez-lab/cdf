@@ -13,7 +13,7 @@ export default async function Association() {
         <div>
           <h1>Association</h1>
           <p>
-            Les chiffres clés de la page d&apos;accueil. Le texte de présentation se modifie
+            Les chiffres  clés de la page d&apos;accueil. Le texte de présentation se modifie
             dans <Link href="/admin/parametres" style={{ textDecoration: 'underline' }}>
             Réglages du site</Link>.
           </p>
