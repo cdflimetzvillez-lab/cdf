@@ -4,6 +4,8 @@ import MenuButton from '@/components/MenuButton';
 import RetourHaut from '@/components/RetourHaut';
 import Marquee from '@/components/Marquee';
 import Footer from '@/components/Footer';
+import RoueRentree from '@/components/roue/RoueRentree';
+import { configRoue, getWheelConfig, roueVisible } from '@/lib/roue/db';
 import { dateCourte, dateLongue, horaires, periode, texteSur } from '@/lib/format';
 import type { SiteSettings, Stat, Evenement } from '@/lib/types';
 
@@ -12,11 +14,14 @@ export const revalidate = 60;
 export default async function Home() {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: stats }, { data: evenements }] = await Promise.all([
+  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig] = await Promise.all([
     supabase.from('site_settings').select('*').eq('id', 1).single(),
     supabase.from('stats').select('*').order('position'),
     supabase.from('evenements').select('*').eq('publie', true).order('position'),
+    getWheelConfig(),
   ]);
+  // Module événementiel : rendu côté serveur uniquement si actif et dans la période.
+  const showWheel = roueVisible(wheelConfig);
 
   const s = settings as SiteSettings;
   const evts = (evenements ?? []) as Evenement[];
@@ -61,6 +66,8 @@ export default async function Home() {
       </header>
 
       <Marquee items={evts.map((e) => `${dateCourte(e.date_debut)} · ${e.titre}`)} />
+
+      {showWheel && <RoueRentree config={configRoue(wheelConfig)} />}
 
       <section id="evenements">
         <div className="wrap">
