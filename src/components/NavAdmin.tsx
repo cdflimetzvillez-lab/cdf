@@ -9,6 +9,7 @@ const LIENS = [
   { href: '/admin/demandes', label: 'Demandes reçues' },
   { href: '/admin/tresors', label: 'Trésors de Noël' },
   { href: '/admin/roue', label: '🎡 Roue de la Rentrée' },
+  { href: '/admin/partenaires', label: 'Partenaires' },
   { href: '/admin/association', label: 'Association' },
   { href: '/admin/parametres', label: 'Réglages du site' },
   { href: '/admin/maintenance', label: 'Maintenance' },

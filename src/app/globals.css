@@ -679,3 +679,18 @@ footer a:hover{color:var(--jaune);}
 .reglement h2{font-size:1.3rem;margin:2rem 0 .6rem;}
 .reglement p{line-height:1.65;margin-bottom:.8rem;max-width:70ch;}
 .reglement ul{margin:.4rem 0 1rem 1.3rem;line-height:1.7;}
+
+/* ---------- PARTENAIRES ---------- */
+.partenaires{margin-top:4rem;border-top:3px solid var(--noir);padding-top:1.6rem;}
+.partenaires .kicker{display:block;text-align:center;margin-bottom:1.2rem;}
+.partenaires-piste{overflow:hidden;}
+.partenaires-ligne{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:1.5rem 3rem;padding:.5rem 2rem;}
+.partenaire{display:flex;align-items:center;justify-content:center;height:70px;width:150px;flex:0 0 auto;
+  filter:grayscale(1) contrast(1.1);opacity:.75;transition:filter .2s,opacity .2s,transform .2s;}
+.partenaire:hover{filter:none;opacity:1;transform:scale(1.06);}
+.partenaire img{max-height:100%;max-width:100%;object-fit:contain;}
+.partenaires-piste.defile .partenaires-ligne{flex-wrap:nowrap;justify-content:flex-start;width:max-content;
+  animation:slide 30s linear infinite;}
+.partenaires-piste.defile:hover .partenaires-ligne{animation-play-state:paused;}
+@media(max-width:640px){.partenaire{height:54px;width:110px;}.partenaires-ligne{gap:1rem 2rem;}}
+@media (prefers-reduced-motion:reduce){.partenaires-piste.defile .partenaires-ligne{animation:none;flex-wrap:wrap;width:auto;justify-content:center;}}

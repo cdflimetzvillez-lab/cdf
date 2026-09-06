@@ -5,20 +5,22 @@ import RetourHaut from '@/components/RetourHaut';
 import Marquee from '@/components/Marquee';
 import Footer from '@/components/Footer';
 import RoueRentree from '@/components/roue/RoueRentree';
+import BandeauPartenaires from '@/components/BandeauPartenaires';
 import { configRoue, getWheelConfig, roueVisible } from '@/lib/roue/db';
 import { dateCourte, dateLongue, horaires, periode, texteSur } from '@/lib/format';
-import type { SiteSettings, Stat, Evenement } from '@/lib/types';
+import type { Partenaire, SiteSettings, Stat, Evenement } from '@/lib/types';
 
 export const revalidate = 60;
 
 export default async function Home() {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig] = await Promise.all([
+  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig, { data: partenaires }] = await Promise.all([
     supabase.from('site_settings').select('*').eq('id', 1).single(),
     supabase.from('stats').select('*').order('position'),
     supabase.from('evenements').select('*').eq('publie', true).order('position'),
     getWheelConfig(),
+    supabase.from('partenaires').select('*').eq('actif', true).order('position'),
   ]);
   // Module événementiel : rendu côté serveur uniquement si actif et dans la période.
   const showWheel = roueVisible(wheelConfig);
@@ -99,6 +101,7 @@ export default async function Home() {
             })}
           </div>
         </div>
+        <BandeauPartenaires partenaires={(partenaires ?? []) as Partenaire[]} />
       </section>
 
       <section className="about" id="association">

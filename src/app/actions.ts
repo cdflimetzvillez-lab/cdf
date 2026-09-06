@@ -250,3 +250,33 @@ export async function supprimerDemande(id: string) {
   await supabase.from('demandes').delete().eq('id', id);
   revalidatePath('/admin/demandes');
 }
+
+
+/* =========================================================
+   PARTENAIRES (logos sur l'accueil)
+   ========================================================= */
+export async function enregistrerPartenaire(_prev: { ok?: string; erreur?: string } | null, fd: FormData) {
+  const { supabase, isAdmin } = await requireAdmin();
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+  const id = String(fd.get('id') ?? '');
+  const data = {
+    nom: String(fd.get('nom') ?? '').trim(),
+    logo_url: String(fd.get('logo_url') ?? '').trim(),
+    site_url: String(fd.get('site_url') ?? '').trim() || null,
+    actif: fd.get('actif') === 'on',
+    position: Number(fd.get('position') ?? 0),
+  };
+  if (!data.nom) return { erreur: 'Nom obligatoire.' };
+  if (!data.logo_url) return { erreur: 'Ajoutez un logo.' };
+  const { error } = id ? await supabase.from('partenaires').update(data).eq('id', id) : await supabase.from('partenaires').insert(data);
+  if (error) return { erreur: error.message };
+  revalidatePath('/'); revalidatePath('/admin/partenaires');
+  return { ok: 'Partenaire enregistré.' };
+}
+
+export async function supprimerPartenaire(id: string) {
+  const { supabase, isAdmin } = await requireAdmin();
+  if (!isAdmin) return;
+  await supabase.from('partenaires').delete().eq('id', id);
+  revalidatePath('/'); revalidatePath('/admin/partenaires');
+}

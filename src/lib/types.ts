@@ -87,3 +87,12 @@ export interface Reservation {
   scanne_le: string | null;
   created_at: string;
 }
+
+export type Partenaire = {
+  id: string;
+  nom: string;
+  logo_url: string;
+  site_url: string | null;
+  actif: boolean;
+  position: number;
+};
