@@ -97,7 +97,7 @@
   text-shadow:0 0 40px rgba(229,192,123,.35);}
 .tdn-hero-accroche{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:1.35rem;color:var(--tdn-creme);}
 .tdn-hero-texte{margin:1rem auto 1.8rem;max-width:34ch;line-height:1.55;color:var(--tdn-texte);}
-.tdn-cta{display:flex;flex-direction:column;gap:.75rem;align-items:stretch;}
+.tdn-cta{display:flex;flex-direction:column;gap:1rem;align-items:stretch;margin-top:1.4rem;}
 @media(min-width:560px){.tdn-cta{flex-direction:row;justify-content:center;}}
 
 .tdn-section{padding:2.5rem 1.2rem;max-width:44rem;margin:0 auto;}
@@ -365,15 +365,18 @@
 }
 
 /* ---------- Page réservation (avant ouverture) ---------- */
-.tdn-resa .tdn-hero{padding-bottom:11rem;}
+.tdn-resa .tdn-hero{padding-bottom:12rem;}
+.tdn-resa .tdn-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:9rem;pointer-events:none;z-index:1;
+  background:linear-gradient(to bottom,transparent,var(--tdn-nuit));}
+.tdn-resa .tdn-village{z-index:0;}
 .tdn-traineau-boucle{animation:tdn-traineau-boucle 14s ease-in-out 1.5s infinite;}
 @keyframes tdn-traineau-boucle{0%{left:-340px;top:14%;opacity:0}6%{opacity:1}55%{opacity:1}62%{left:110%;top:5%;opacity:0}100%{left:110%;opacity:0}}
-.tdn-bientot{margin-top:1.8rem;display:inline-flex;align-items:center;gap:.7rem;padding:.55rem 1.1rem .55rem .7rem;border:1px solid rgba(229,192,123,.45);border-radius:999px;background:rgba(8,20,48,.5);font-size:.9rem;}
+.tdn-bientot{margin-top:1.6rem;display:inline-flex;align-items:center;gap:.7rem;padding:.55rem 1.1rem .55rem .7rem;border:1px solid rgba(229,192,123,.45);border-radius:999px;background:rgba(8,20,48,.5);font-size:.9rem;}
 .tdn-bientot b{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:50%;background:var(--tdn-or);color:var(--tdn-nuit);font-size:.8rem;}
-.tdn-tresor{text-align:center;}
+.tdn-tresor{text-align:center;padding-top:3rem;}
 .tdn-coffre-fixe{position:relative;margin-bottom:1.4rem;}
-.tdn-lumiere-locale{position:absolute;left:50%;top:40%;width:420px;height:420px;transform:translate(-50%,-50%);inset:auto;animation:none;
-  background:radial-gradient(circle,rgba(229,192,123,.4),rgba(229,192,123,.1) 45%,transparent 70%);}
+.tdn-lumiere-locale{position:absolute;left:50%;top:45%;width:300px;height:300px;transform:translate(-50%,-50%);inset:auto;animation:none;
+  background:radial-gradient(circle,rgba(229,192,123,.35),rgba(229,192,123,.08) 45%,transparent 68%);}
 .tdn-coffre-fixe .tdn-coffre{position:relative;width:170px;height:125px;}
 .tdn-montant{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(4.5rem,16vw,9rem);line-height:.95;color:var(--tdn-creme);text-shadow:0 0 50px rgba(229,192,123,.55);margin:.2rem 0;}
 .tdn-quoi{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.5rem;color:var(--tdn-creme);}

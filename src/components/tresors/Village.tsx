@@ -5,7 +5,7 @@ export default function Village({ className = '' }: { className?: string }) {
       <defs>
         <linearGradient id="tdn-sol" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0d1b3d" />
-          <stop offset="1" stopColor="#060c1f" />
+          <stop offset="1" stopColor="#081430" />
         </linearGradient>
       </defs>
       <path d="M0 110 L60 100 L120 108 L180 96 L240 104 L300 94 L360 104 L420 92 L480 100 L540 90 L600 100 L660 92 L720 102 L800 96 L800 160 L0 160 Z" fill="url(#tdn-sol)" />
