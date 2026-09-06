@@ -78,8 +78,8 @@ export default function Roue({ angle, tourne, onClick, disabled, pancarte = '' }
             <line x1={CX + 22} y1={CY - 30} x2={CX + 14} y2={CY - 14} stroke="#3b220c" strokeWidth="2.5" />
             <rect x={CX - 52} y={CY - 16} width="104" height={lignes.length > 1 ? 44 : 32} rx="3" fill="url(#roue-bois)" stroke="#3b220c" strokeWidth="3" transform={`rotate(-4 ${CX} ${CY})`} />
             <circle cx={CX - 44} cy={CY - 9} r="2" fill="#3b220c" /><circle cx={CX + 44} cy={CY - 9} r="2" fill="#3b220c" />
-            <text x={CX} y={lignes.length > 1 ? CY - 1 : CY + 5} textAnchor="middle" fill="#FFD400" fontFamily="Anton, Impact, sans-serif" fontSize="13" letterSpacing=".04em" transform={`rotate(-4 ${CX} ${CY})`} style={{ textTransform: 'uppercase' }}>
-              {lignes.map((l, i) => <tspan key={i} x={CX} dy={i === 0 ? 0 : 15}>{l}</tspan>)}
+            <text textAnchor="middle" fill="#FFD400" fontFamily="Anton, Impact, sans-serif" fontSize="13" transform={`rotate(-4 ${CX} ${CY})`}>
+              {lignes.map((l, i) => <tspan key={i} x={CX} y={lignes.length > 1 ? CY + 2 + i * 15 : CY + 5}>{l.toUpperCase()}</tspan>)}
             </text>
           </g>
         )}
