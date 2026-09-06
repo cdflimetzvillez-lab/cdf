@@ -35,6 +35,7 @@ export default function MenuButton() {
           <nav className="menu-nav" onClick={() => setOpen(false)}>
             <Link href="/">Accueil</Link>
             <Link href="/#evenements">Programme</Link>
+            <Link href="/tresors-de-noel">Trésors de Noël</Link>
             <Link href="/#association">L&apos;association</Link>
             <Link href="/#benevoles">Bénévoles</Link>
           </nav>

@@ -7,6 +7,7 @@ const LIENS = [
   { href: '/admin/evenements', label: 'Événements' },
   { href: '/admin/reservations', label: 'Réservations' },
   { href: '/admin/demandes', label: 'Demandes reçues' },
+  { href: '/admin/tresors', label: 'Trésors de Noël' },
   { href: '/admin/association', label: 'Association' },
   { href: '/admin/parametres', label: 'Réglages du site' },
   { href: '/admin/maintenance', label: 'Maintenance' },
