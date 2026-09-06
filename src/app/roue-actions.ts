@@ -40,6 +40,28 @@ async function ipHash() {
   return ip ? createHash('sha256').update(ip + (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').slice(0, 8)).digest('hex').slice(0, 32) : null;
 }
 
+/** Tirage : taux de gain, puis lot pondéré parmi ceux qui ont encore du stock. Ne modifie rien en base. */
+async function tirer(tauxGain: number) {
+  const db = createAdminClient();
+  let lot: LotRoue | null = null;
+  if (Math.random() * 100 < tauxGain) {
+    const { data: lots } = await db.from('roue_lots').select('*').eq('actif', true).gt('stock', 0);
+    const { data: attribs } = await db.from('roue_participations').select('lot_id').not('lot_id', 'is', null);
+    const pris: Record<string, number> = {};
+    for (const a of attribs ?? []) pris[a.lot_id!] = (pris[a.lot_id!] ?? 0) + 1;
+    const dispo = ((lots ?? []) as LotRoue[]).filter((l) => l.stock - (pris[l.id] ?? 0) > 0);
+    const total = dispo.reduce((s, l) => s + Math.max(l.poids, 0), 0);
+    if (total > 0) {
+      let r = Math.random() * total;
+      for (const l of dispo) { r -= Math.max(l.poids, 0); if (r <= 0) { lot = l; break; } }
+      lot ??= dispo[dispo.length - 1];
+    }
+  }
+  const gagne = !!lot;
+  const pool = gagne ? SEGMENTS_GAGNANTS : Array.from({ length: NB_SEGMENTS }, (_, i) => i).filter((i) => !SEGMENTS_GAGNANTS.includes(i));
+  return { lot, gagne, segment: pool[Math.floor(Math.random() * pool.length)] };
+}
+
 export type ResultatTour =
   | { statut: 'ok'; participationId: string; gagne: boolean; segment: number; lot?: { nom: string; description: string | null }; code?: string }
   | { statut: 'deja_joue'; message: string }
@@ -77,24 +99,7 @@ export async function jouer(): Promise<ResultatTour> {
     if ((dejaIp ?? 0) >= MAX_PAR_IP) return { statut: 'deja_joue', message: 'Trop de participations depuis cette connexion aujourd’hui.' };
   }
 
-  // Tirage : taux de gain, puis lot pondéré parmi ceux qui ont du stock.
-  let lot: LotRoue | null = null;
-  if (Math.random() * 100 < cfg.taux_gain) {
-    const { data: lots } = await db.from('roue_lots').select('*').eq('actif', true).gt('stock', 0);
-    const { data: attribs } = await db.from('roue_participations').select('lot_id').not('lot_id', 'is', null);
-    const pris: Record<string, number> = {};
-    for (const a of attribs ?? []) pris[a.lot_id!] = (pris[a.lot_id!] ?? 0) + 1;
-    const dispo = ((lots ?? []) as LotRoue[]).filter((l) => l.stock - (pris[l.id] ?? 0) > 0);
-    const total = dispo.reduce((s, l) => s + Math.max(l.poids, 0), 0);
-    if (total > 0) {
-      let r = Math.random() * total;
-      for (const l of dispo) { r -= Math.max(l.poids, 0); if (r <= 0) { lot = l; break; } }
-      lot ??= dispo[dispo.length - 1];
-    }
-  }
-  const gagne = !!lot;
-  const pool = gagne ? SEGMENTS_GAGNANTS : Array.from({ length: NB_SEGMENTS }, (_, i) => i).filter((i) => !SEGMENTS_GAGNANTS.includes(i));
-  const segment = pool[Math.floor(Math.random() * pool.length)];
+  const { lot, gagne, segment } = await tirer(cfg.taux_gain);
 
   let code: string | null = null;
   let inserted: { id: string } | null = null;
@@ -202,6 +207,16 @@ export async function supprimerLotRoue(id: string) {
   const sb = await admin();
   await sb.from('roue_lots').delete().eq('id', id);
   rafraichir();
+}
+
+/** Tour d'essai depuis l'admin : même tirage, rien n'est enregistré, aucun stock consommé. */
+export async function jouerTest(): Promise<ResultatTour> {
+  await admin();
+  const cfg = configRoue(await getWheelConfig());
+  const { lot, gagne, segment } = await tirer(cfg.taux_gain);
+  return gagne
+    ? { statut: 'ok', participationId: 'test', gagne: true, segment, lot: { nom: lot!.nom, description: lot!.description }, code: 'RR-TEST' }
+    : { statut: 'ok', participationId: 'test', gagne: false, segment };
 }
 
 export async function marquerRetire(id: string, retire: boolean) {

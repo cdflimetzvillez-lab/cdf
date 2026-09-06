@@ -3,6 +3,7 @@ import CarteRoue from '@/components/roue/CarteRoue';
 import FormModuleRoue from '@/components/roue/FormModuleRoue';
 import GestionLotsRoue from '@/components/roue/GestionLotsRoue';
 import TableGagnants from '@/components/roue/TableGagnants';
+import TestRoue from '@/components/roue/TestRoue';
 import { configRoue, roueVisible } from '@/lib/roue/db';
 import type { LotRoue, ModuleAccueil, ParticipationRoue, StatsRoue } from '@/lib/roue/types';
 
@@ -30,6 +31,7 @@ export default async function AdminRoue({ searchParams }: { searchParams: Promis
       </div>
       <CarteRoue module={m} visible={roueVisible(m)} stats={(stats ?? {}) as Partial<StatsRoue>} onglet={onglet} />
 
+      {onglet === 'apercu' && <TestRoue config={configRoue(m)} />}
       {onglet === 'parametres' && <FormModuleRoue module={m} config={configRoue(m)} />}
       {onglet === 'lots' && <GestionLotsRoue lots={(lots ?? []) as LotRoue[]} pris={pris} />}
       {onglet === 'gagnants' && <TableGagnants lignes={(gagnants ?? []) as ParticipationRoue[]} />}
