@@ -46,6 +46,18 @@ export type ResultatTour =
   | { statut: 'ferme'; message: string }
   | { statut: 'erreur'; message: string };
 
+/** Le joueur a-t-il déjà utilisé ses tours du jour ? (pour ne pas rouvrir le pop-up) */
+export async function statutJoueur(): Promise<{ peutJouer: boolean }> {
+  const module = await getWheelConfig();
+  if (!roueVisible(module)) return { peutJouer: false };
+  const jar = await cookies();
+  const id = jar.get(COOKIE)?.value;
+  if (!id) return { peutJouer: true };
+  const db = createAdminClient();
+  const { count } = await db.from('roue_participations').select('id', { count: 'exact', head: true }).eq('joueur_id', id).eq('jour', jourParis());
+  return { peutJouer: (count ?? 0) < configRoue(module).participations_par_jour };
+}
+
 /** Un tour de roue. Tout est décidé ici : le navigateur ne fait qu'animer. */
 export async function jouer(): Promise<ResultatTour> {
   const module = await getWheelConfig();
@@ -103,14 +115,16 @@ export async function jouer(): Promise<ResultatTour> {
 export async function reclamer(_prev: EtatRoue, fd: FormData): Promise<EtatRoue> {
   const participationId = String(fd.get('participation_id') ?? '');
   const prenom = String(fd.get('prenom') ?? '').trim();
+  const nom = String(fd.get('nom') ?? '').trim();
   const email = String(fd.get('email') ?? '').trim().toLowerCase();
   const telephone = String(fd.get('telephone') ?? '').trim();
-  if (!prenom) return { erreur: 'Indiquez votre prénom.' };
+  if (!prenom || !nom) return { erreur: 'Indiquez votre prénom et votre nom.' };
+  if (telephone.replace(/[\s.\-()]/g, '').length < 10) return { erreur: 'Numéro de téléphone invalide.' };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse e-mail invalide.' };
   const id = await joueurId();
   const db = createAdminClient();
   const { error } = await db.from('roue_participations')
-    .update({ prenom, email, telephone: telephone || null, reclame_le: new Date().toISOString() })
+    .update({ prenom, nom, email, telephone: telephone || null, reclame_le: new Date().toISOString() })
     .eq('id', participationId).eq('joueur_id', id).eq('gagne', true);
   if (error) return { erreur: 'Enregistrement impossible.' };
   return { ok: 'C’est noté ! Gardez votre code précieusement.' };

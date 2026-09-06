@@ -674,3 +674,8 @@ footer a:hover{color:var(--jaune);}
 /* une seule ligne par valeur dans le bandeau d'infos */
 .key .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .key .v small{white-space:normal;}
+
+/* ---------- RÈGLEMENT ---------- */
+.reglement h2{font-size:1.3rem;margin:2rem 0 .6rem;}
+.reglement p{line-height:1.65;margin-bottom:.8rem;max-width:70ch;}
+.reglement ul{margin:.4rem 0 1rem 1.3rem;line-height:1.7;}

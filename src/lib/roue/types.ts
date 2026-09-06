@@ -36,6 +36,7 @@ export type ParticipationRoue = {
   lot_id: string | null;
   code: string | null;
   prenom: string | null;
+  nom: string | null;
   email: string | null;
   telephone: string | null;
   reclame_le: string | null;
