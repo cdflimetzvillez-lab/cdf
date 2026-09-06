@@ -15,8 +15,17 @@ export default async function PageReglementTdn() {
   ]);
   const s = settings as SiteSettings;
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cdf-limetzvillez.fr';
-  const grand = lots.find((l) => l.grand);
   const nbMissions = missions.length || 12;
+  const grandLibelle = `un bon d'achat multi-enseignes unique d'une valeur de ${r.grand_tresor_montant}, utilisable dans l'ensemble des enseignes partenaires de l'émetteur`;
+  // Regroupe les lots par nom (évite les doublons) et additionne les stocks.
+  const autresLots = Object.values(
+    lots.filter((l) => !l.grand).reduce<Record<string, { nom: string; partenaire: string | null; quantite: number }>>((acc, l) => {
+      const k = l.nom.trim().toLowerCase();
+      acc[k] ??= { nom: l.nom.trim(), partenaire: l.tdn_partenaires?.nom ?? null, quantite: 0 };
+      acc[k].quantite += l.stock;
+      return acc;
+    }, {})
+  );
 
   return (
     <main className="tdn-page tdn-reglement" style={{ maxWidth: '44rem' }}>
@@ -49,8 +58,13 @@ export default async function PageReglementTdn() {
 
       <h2>Article 6 · Dotations</h2>
       <p><b>Chaque participant ayant obtenu sa clé virtuelle reçoit un lot</b>, dans les conditions de l&apos;article 7. Les lots sont attribués par tirage au sort informatique au moment de la révélation, parmi les lots disponibles, à l&apos;exception du grand trésor.</p>
-      <p>Le <b>grand trésor</b> est constitué de {grand?.nom ?? `${r.grand_tresor_montant} ${r.grand_tresor_texte}`}. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu, et révélé lors de la cérémonie de révélation.</p>
-      <p>Les autres lots sont notamment : {lots.filter((l) => !l.grand).map((l) => l.nom).join(', ') || 'places de cinéma, repas, paniers gourmands, bons d’achat, chocolats et cadeaux de Noël'}, dans la limite des stocks disponibles. L&apos;Organisateur se réserve la possibilité de remplacer un lot par un lot de valeur équivalente ou supérieure.</p>
+      <p>Le <b>grand trésor</b> est {grandLibelle}. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu, et révélé lors de la cérémonie de révélation.</p>
+      <p>Les autres lots mis en jeu sont les suivants, dans la limite des quantités indiquées :</p>
+      <ul className="tdn-reglement-lots">
+        {autresLots.map((l) => <li key={l.nom}><b>{l.nom}</b>{l.partenaire && ` (offert par ${l.partenaire})`} : {l.quantite} exemplaire{l.quantite > 1 ? 's' : ''}</li>)}
+        {autresLots.length === 0 && <li>Liste à venir.</li>}
+      </ul>
+      <p>La valeur des lots est indicative. L&apos;Organisateur se réserve la possibilité de remplacer un lot par un lot de valeur équivalente ou supérieure, notamment en cas d&apos;indisponibilité chez un partenaire.</p>
       <p>Les lots ne peuvent être échangés contre leur valeur en espèces ni contre un autre lot. Ils sont nominatifs et non cessibles. Un participant ne peut recevoir qu&apos;un seul lot par clé.</p>
 
       <h2>Article 7 · Révélation et remise des lots</h2>

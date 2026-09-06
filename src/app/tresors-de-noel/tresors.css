@@ -404,3 +404,4 @@
 .tdn-reglement h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.5rem;color:var(--tdn-or);margin:2rem 0 .6rem;}
 .tdn-reglement p{line-height:1.65;margin-bottom:.8rem;color:var(--tdn-texte);}
 .tdn-reglement b{color:var(--tdn-creme);}
+.tdn-reglement-lots{margin:0 0 1rem 1.3rem;line-height:1.7;color:var(--tdn-texte);}
