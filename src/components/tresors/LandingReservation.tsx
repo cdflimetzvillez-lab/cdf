@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Neige from './Neige';
 import Village from './Village';
 import Traineau from './Traineau';
+import Hotte from './Hotte';
 import { euros } from '@/lib/sumup';
 import type { Reglages } from '@/lib/tresors/types';
 
@@ -45,13 +46,10 @@ export default function LandingReservation({ reglages: r, connecte, placesRestan
       </section>
 
       <section className="tdn-section tdn-tresor" id="tresor">
-        <div className="tdn-coffre-scene tdn-coffre-fixe" aria-hidden="true">
-          <div className="tdn-lumiere-or tdn-lumiere-locale" />
-          <div className="tdn-coffre ouvert"><i className="tdn-coffre-couvercle" /><i className="tdn-coffre-corps" /><i className="tdn-coffre-lueur" /></div>
-        </div>
+        <Hotte className="tdn-hotte" etiquette={r.grand_tresor_montant} />
         <h2 className="tdn-h2">Le grand trésor</h2>
-        <div className="tdn-montant">{r.grand_tresor_montant}</div>
         <p className="tdn-quoi">{r.grand_tresor_texte}</p>
+        <div className="tdn-montant">{r.grand_tresor_montant}</div>
         <p className="tdn-comment">Il se cache dans l&apos;une des clés remises lors de la révélation. Toutes les clés ouvrent un trésor : l&apos;une d&apos;elles ouvre celui-là.</p>
         <p className="tdn-autres">…et de nombreux autres lots, un pour chaque participant qui termine l&apos;aventure.</p>
       </section>
