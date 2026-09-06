@@ -363,3 +363,39 @@
   .tdn-neige{display:none;}
   .tdn-traineau{display:none;}
 }
+
+/* ---------- Page réservation (avant ouverture) ---------- */
+.tdn-resa .tdn-hero{padding-bottom:11rem;}
+.tdn-traineau-boucle{animation:tdn-traineau-boucle 14s ease-in-out 1.5s infinite;}
+@keyframes tdn-traineau-boucle{0%{left:-340px;top:14%;opacity:0}6%{opacity:1}55%{opacity:1}62%{left:110%;top:5%;opacity:0}100%{left:110%;opacity:0}}
+.tdn-bientot{margin-top:1.8rem;display:inline-flex;align-items:center;gap:.7rem;padding:.55rem 1.1rem .55rem .7rem;border:1px solid rgba(229,192,123,.45);border-radius:999px;background:rgba(8,20,48,.5);font-size:.9rem;}
+.tdn-bientot b{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:50%;background:var(--tdn-or);color:var(--tdn-nuit);font-size:.8rem;}
+.tdn-tresor{text-align:center;}
+.tdn-coffre-fixe{position:relative;margin-bottom:1.4rem;}
+.tdn-lumiere-locale{position:absolute;left:50%;top:40%;width:420px;height:420px;transform:translate(-50%,-50%);inset:auto;animation:none;
+  background:radial-gradient(circle,rgba(229,192,123,.4),rgba(229,192,123,.1) 45%,transparent 70%);}
+.tdn-coffre-fixe .tdn-coffre{position:relative;width:170px;height:125px;}
+.tdn-montant{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(4.5rem,16vw,9rem);line-height:.95;color:var(--tdn-creme);text-shadow:0 0 50px rgba(229,192,123,.55);margin:.2rem 0;}
+.tdn-quoi{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.5rem;color:var(--tdn-creme);}
+.tdn-comment{margin:1.2rem auto 0;max-width:46ch;color:var(--tdn-muted);}
+.tdn-autres{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.35rem;color:var(--tdn-or);margin-top:2rem;}
+.tdn-raisons{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;}
+.tdn-raison{padding:1.5rem 1.3rem;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(255,255,255,.05);}
+.tdn-raison h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.55rem;color:var(--tdn-creme);margin:.4rem 0;}
+.tdn-raison p{color:var(--tdn-muted);font-size:.95rem;line-height:1.5;}
+.tdn-raison-or{border-color:rgba(229,192,123,.55);background:linear-gradient(135deg,rgba(229,192,123,.2),rgba(138,42,58,.22));}
+.tdn-raison-or h3{color:var(--tdn-or);}
+.tdn-raison-or p{color:var(--tdn-texte);}
+.tdn-carte-resa{max-width:34rem;margin:0 auto;padding:2.2rem 1.6rem;border-color:rgba(229,192,123,.4);box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;text-align:center;}
+.tdn-carte-resa h2{font-size:2.2rem;}
+.tdn-sceau{position:absolute;top:-1.1rem;left:50%;transform:translateX(-50%);width:2.2rem;height:2.2rem;display:grid;place-items:center;border-radius:50%;background:var(--tdn-or);color:var(--tdn-nuit);}
+.tdn-centre-txt{text-align:center;}
+.tdn-tarifs{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin:1.4rem 0;}
+.tdn-tarifs div{padding:1rem;border-radius:14px;background:rgba(8,20,48,.6);border:1px solid rgba(255,255,255,.12);}
+.tdn-tarifs span{display:block;font-size:.8rem;color:var(--tdn-muted);}
+.tdn-tarifs b{font-family:'Cormorant Garamond',serif;font-size:2.2rem;color:var(--tdn-creme);line-height:1.1;}
+.tdn-jauge-txt{font-size:.9rem;color:var(--tdn-muted);margin-bottom:.4rem;}
+.tdn-jauge-txt b{color:var(--tdn-or);}
+.tdn-reglement h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.5rem;color:var(--tdn-or);margin:2rem 0 .6rem;}
+.tdn-reglement p{line-height:1.65;margin-bottom:.8rem;color:var(--tdn-texte);}
+.tdn-reglement b{color:var(--tdn-creme);}

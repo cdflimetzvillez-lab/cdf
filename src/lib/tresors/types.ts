@@ -13,6 +13,12 @@ export type Reglages = {
   tarif_enfant_centimes: number;
   inscriptions_ouvertes: boolean;
   jeu_actif: boolean;
+  places_max: number;
+  jeu_debut: string | null;
+  jeu_fin: string | null;
+  grand_tresor_montant: string;
+  grand_tresor_texte: string;
+  lieu_revelation: string;
 };
 
 export type Partenaire = { id: string; nom: string; type: string | null };

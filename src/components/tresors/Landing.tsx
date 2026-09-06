@@ -73,6 +73,7 @@ export default function Landing({ reglages: r, connecte }: { reglages: Reglages;
 
       <footer className="tdn-pied">
         <span>Comité des Fêtes de Limetz-Villez</span>
+        <Link href="/tresors-de-noel/reglement">Règlement</Link>
         <Link href="/">← Retour au site</Link>
       </footer>
     </main>

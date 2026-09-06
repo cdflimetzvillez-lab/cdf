@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import Entete from '@/components/tresors/Entete';
 import NavTresors from '@/components/tresors/NavTresors';
 import SelecteurParticipant from '@/components/tresors/SelecteurParticipant';
-import { contexteJoueur, lireMissions, lireReglages } from '@/lib/tresors/db';
+import { contexteJoueur, dateFr, jeuOuvert, lireMissions, lireReglages } from '@/lib/tresors/db';
 
 export default async function PageAventure() {
   const ctx = await contexteJoueur();
@@ -46,10 +46,11 @@ export default async function PageAventure() {
           <p>La participation de {actif.participant.prenom} n&apos;est pas encore réglée.</p>
           <Link href="/tresors-de-noel/compte" className="tdn-btn tdn-btn-or tdn-btn-large">Régler depuis mon compte</Link>
         </section>
-      ) : !r.jeu_actif ? (
-        <section className="tdn-carte tdn-mission-carte">
-          <div className="tdn-sur">Patience…</div>
-          <p>Le jeu ouvrira bientôt. {r.periode_texte}.</p>
+      ) : !jeuOuvert(r) ? (
+        <section className="tdn-carte tdn-mission-carte tdn-or">
+          <div className="tdn-sur">Votre place est réservée</div>
+          <h2 className="tdn-titre-fee">L&apos;aventure commence le {dateFr(r.jeu_debut)}</h2>
+          <p>Revenez ici ce jour-là : la première mission vous attendra. {r.periode_texte}.</p>
         </section>
       ) : termine ? (
         <section className="tdn-carte tdn-mission-carte tdn-or">

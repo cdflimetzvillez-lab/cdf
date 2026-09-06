@@ -19,12 +19,13 @@ export default async function AdminTresors() {
         <div><h1>Trésors de Noël</h1><p>Chasse aux trésors du Marché de Noël.</p></div>
         <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap' }}>
           <Link className="btn btn-w btn-sm" href="/tresors-de-noel" target="_blank">↗ Page du jeu</Link>
+          <Link className="btn btn-w btn-sm" href="/tresors-de-noel/reglement" target="_blank">↗ Règlement</Link>
           <Link className="btn btn-y btn-sm" href="/tresors-de-noel/revelation" target="_blank">↗ Écran de révélation</Link>
         </div>
       </div>
 
       <div className="kpi">
-        <div><b>{s.inscrits ?? 0}</b><span>Participants inscrits</span></div>
+        <div><b>{s.inscrits ?? 0} / {reglages?.places_max ?? '—'}</b><span>Places réservées</span></div>
         <div><b>{euros(s.ca_centimes ?? 0)}</b><span>Chiffre d&apos;affaires</span></div>
         <div><b>{s.commences ?? 0}</b><span>Ont commencé</span></div>
         <div><b>{s.termines ?? 0}</b><span>Ont terminé</span></div>
@@ -36,7 +37,7 @@ export default async function AdminTresors() {
         <div className="panel">
           <h2>État</h2>
           <p>Inscriptions : <span className={`pill ${reglages?.inscriptions_ouvertes ? 'on' : 'off'}`}>{reglages?.inscriptions_ouvertes ? 'ouvertes' : 'fermées'}</span></p>
-          <p style={{ marginTop: '.5rem' }}>Jeu : <span className={`pill ${reglages?.jeu_actif ? 'on' : 'off'}`}>{reglages?.jeu_actif ? 'actif' : 'fermé'}</span></p>
+          <p style={{ marginTop: '.5rem' }}>Jeu : <span className={`pill ${reglages?.jeu_actif ? 'on' : 'off'}`}>{reglages?.jeu_actif ? 'activé' : 'désactivé'}</span> · du {reglages?.jeu_debut ? new Date(reglages.jeu_debut).toLocaleDateString('fr-FR') : '—'} au {reglages?.jeu_fin ? new Date(reglages.jeu_fin).toLocaleDateString('fr-FR') : '—'}</p>
           <p style={{ marginTop: '.5rem' }}>{nbMissions ?? 0} missions · {nbLots ?? 0} lots</p>
           <Link className="btn btn-y btn-sm" href="/admin/tresors/reglages" style={{ marginTop: '1rem' }}>Modifier les réglages</Link>
         </div>

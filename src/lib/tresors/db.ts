@@ -80,3 +80,26 @@ export async function contexteJoueur() {
   const actif = progressions.find((p) => p.participant.id === actifId) ?? null;
   return { compte, progressions, actif };
 }
+
+/** Le jeu est-il jouable maintenant ? (interrupteur admin + fenêtre de dates) */
+export function jeuOuvert(r: Reglages, maintenant = new Date()): boolean {
+  if (!r.jeu_actif) return false;
+  if (r.jeu_debut && maintenant < new Date(r.jeu_debut)) return false;
+  if (r.jeu_fin && maintenant > new Date(r.jeu_fin)) return false;
+  return true;
+}
+
+/** Places : payées + en attente récente (commande SumUp en cours, 30 min). */
+export async function placesPrises(): Promise<number> {
+  const db = createAdminClient();
+  const [{ count: payes }, { data: cmds }] = await Promise.all([
+    db.from('tdn_participants').select('id', { count: 'exact', head: true }).eq('paye', true),
+    db.from('tdn_commandes').select('participant_ids').eq('statut', 'en_attente').gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),
+  ]);
+  const enAttente = (cmds ?? []).reduce((s, c) => s + (c.participant_ids?.length ?? 0), 0);
+  return (payes ?? 0) + enAttente;
+}
+
+export const dateFr = (iso: string | null, avecHeure = false) => iso
+  ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', ...(avecHeure ? { timeStyle: 'short' } : {}), timeZone: 'Europe/Paris' }).format(new Date(iso))
+  : '—';

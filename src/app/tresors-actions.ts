@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/supabase/server';
 import { creerCheckout, lireCheckout } from '@/lib/sumup';
-import { COOKIE_ACTIF, COOKIE_TOKEN, compteCourant, lireMissions, lireReglages } from '@/lib/tresors/db';
+import { COOKIE_ACTIF, COOKIE_TOKEN, compteCourant, jeuOuvert, lireMissions, lireReglages, placesPrises } from '@/lib/tresors/db';
 import type { Categorie, Cle, Lot, Mission, Bloc } from '@/lib/tresors/types';
 import { numeroCle } from '@/lib/tresors/types';
 
@@ -51,6 +51,9 @@ export async function inscrire(_prev: Etat, fd: FormData): Promise<Etat> {
   if (!emailValide(email)) return { erreur: 'Adresse e-mail invalide.' };
   const lignes = prenoms.map((p, i) => ({ prenom: p, categorie: categories[i] === 'adulte' ? 'adulte' : 'enfant' as Categorie })).filter((l) => l.prenom);
   if (lignes.length === 0) return { erreur: 'Ajoutez au moins un participant.' };
+  const restantes = reglages.places_max - (await placesPrises());
+  if (restantes <= 0) return { erreur: 'Complet : toutes les places ont été réservées.' };
+  if (lignes.length > restantes) return { erreur: `Il ne reste que ${restantes} place${restantes > 1 ? 's' : ''}. Réduisez le nombre de participants.` };
 
   const db = createAdminClient();
 
@@ -142,6 +145,8 @@ export async function payerEnAttente(): Promise<Etat> {
   const db = createAdminClient();
   const { data: parts } = await db.from('tdn_participants').select('id, categorie').eq('compte_id', compte.id).eq('paye', false);
   if (!parts || parts.length === 0) return { erreur: 'Rien à payer.' };
+  const restantes = reglages.places_max - (await placesPrises());
+  if (parts.length > restantes) return { erreur: restantes <= 0 ? 'Complet : toutes les places ont été réservées.' : `Il ne reste que ${restantes} place${restantes > 1 ? 's' : ''}.` };
   const montant = parts.reduce((s, p) => s + (p.categorie === 'adulte' ? reglages.tarif_adulte_centimes : reglages.tarif_enfant_centimes), 0);
   const reference = referenceCommande();
   const ids = parts.map((p) => p.id);
@@ -228,7 +233,7 @@ export async function validerReponse(missionId: string, reponse: string, partici
   const compte = await compteCourant();
   if (!compte) return { ok: false, termines: [], erreur: 'Non connecté.' };
   const reglages = await lireReglages();
-  if (!reglages.jeu_actif) return { ok: false, termines: [], erreur: 'Le jeu n’est pas ouvert pour le moment.' };
+  if (!jeuOuvert(reglages)) return { ok: false, termines: [], erreur: 'Le jeu n’est pas ouvert pour le moment.' };
 
   const db = createAdminClient();
   const { data: mission } = await db.from('tdn_missions').select('*').eq('id', missionId).single();
@@ -310,6 +315,13 @@ async function admin() {
 }
 const chemins = () => { revalidatePath('/admin/tresors', 'layout'); revalidatePath('/tresors-de-noel', 'layout'); };
 
+function isoParisTdn(v: string) {
+  if (!v) return null;
+  const d = new Date(v);
+  const paris = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  return new Date(d.getTime() + (d.getTime() - paris.getTime())).toISOString();
+}
+
 export async function majReglagesTdn(_prev: Etat, fd: FormData): Promise<Etat> {
   const sb = await admin();
   const { error } = await sb.from('tdn_reglages').update({
@@ -322,6 +334,12 @@ export async function majReglagesTdn(_prev: Etat, fd: FormData): Promise<Etat> {
     tarif_enfant_centimes: Math.round(Number(fd.get('tarif_enfant') ?? 0) * 100),
     inscriptions_ouvertes: fd.get('inscriptions_ouvertes') === 'on',
     jeu_actif: fd.get('jeu_actif') === 'on',
+    places_max: Math.max(0, Number(fd.get('places_max') ?? 300)),
+    jeu_debut: isoParisTdn(String(fd.get('jeu_debut') ?? '')),
+    jeu_fin: isoParisTdn(String(fd.get('jeu_fin') ?? '')),
+    grand_tresor_montant: String(fd.get('grand_tresor_montant') ?? '').trim(),
+    grand_tresor_texte: String(fd.get('grand_tresor_texte') ?? '').trim(),
+    lieu_revelation: String(fd.get('lieu_revelation') ?? '').trim(),
   }).eq('id', 1);
   if (error) return { erreur: error.message };
   chemins();
