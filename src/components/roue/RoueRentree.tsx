@@ -126,7 +126,12 @@ function Gagne({ resultat, message, onFermer }: { resultat: Extract<ResultatTour
       {resultat.lot?.description && <p className="roue-sous">{resultat.lot.description}</p>}
       <div className="roue-code"><span className="mono">Votre code</span><b>{resultat.code}</b></div>
       <p>{message}</p>
-      {etat?.ok ? (
+      {etat?.annule ? (
+        <>
+          <div className="msg ko" style={{ fontWeight: 700 }}>⚠️ {etat.annule}</div>
+          <button className="btn btn-k" onClick={onFermer}>D&apos;accord</button>
+        </>
+      ) : etat?.ok ? (
         <>
           <div className="msg ok">{etat.ok}</div>
           <button className="btn btn-k" onClick={onFermer}>Fermer</button>

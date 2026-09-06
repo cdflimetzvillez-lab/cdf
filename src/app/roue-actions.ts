@@ -8,7 +8,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 import { configRoue, getWheelConfig, roueVisible } from '@/lib/roue/db';
 import { NB_SEGMENTS, SEGMENTS_GAGNANTS, type LotRoue } from '@/lib/roue/types';
 
-export type EtatRoue = { ok?: string; erreur?: string } | null;
+export type EtatRoue = { ok?: string; erreur?: string; annule?: string } | null;
 
 const COOKIE = 'roue_joueur';
 const MAX_PAR_IP = 15; // garde-fou contre les cookies effacés en boucle
@@ -46,7 +46,7 @@ async function tirer(tauxGain: number) {
   let lot: LotRoue | null = null;
   if (Math.random() * 100 < tauxGain) {
     const { data: lots } = await db.from('roue_lots').select('*').eq('actif', true).gt('stock', 0);
-    const { data: attribs } = await db.from('roue_participations').select('lot_id').not('lot_id', 'is', null);
+    const { data: attribs } = await db.from('roue_participations').select('lot_id').not('lot_id', 'is', null).is('annulee_le', null);
     const pris: Record<string, number> = {};
     for (const a of attribs ?? []) pris[a.lot_id!] = (pris[a.lot_id!] ?? 0) + 1;
     const dispo = ((lots ?? []) as LotRoue[]).filter((l) => l.stock - (pris[l.id] ?? 0) > 0);
@@ -99,7 +99,13 @@ export async function jouer(): Promise<ResultatTour> {
     if ((dejaIp ?? 0) >= MAX_PAR_IP) return { statut: 'deja_joue', message: 'Trop de participations depuis cette connexion aujourd’hui.' };
   }
 
-  const { lot, gagne, segment } = await tirer(cfg.taux_gain);
+  // Un joueur qui a déjà gagné son quota de lots continue de jouer, mais ne peut plus gagner.
+  let tauxGain = cfg.taux_gain;
+  if (cfg.lots_max_par_joueur > 0) {
+    const { count: dejaGagne } = await db.from('roue_participations').select('id', { count: 'exact', head: true }).eq('joueur_id', id).eq('gagne', true);
+    if ((dejaGagne ?? 0) >= cfg.lots_max_par_joueur) tauxGain = 0;
+  }
+  const { lot, gagne, segment } = await tirer(tauxGain);
 
   let code: string | null = null;
   let inserted: { id: string } | null = null;
@@ -116,21 +122,43 @@ export async function jouer(): Promise<ResultatTour> {
     : { statut: 'ok', participationId: inserted.id, gagne: false, segment };
 }
 
-/** Le gagnant laisse ses coordonnées pour récupérer son lot. */
+const normTel = (t: string) => t.replace(/[\s.\-()]/g, '').replace(/^\+33/, '0');
+
+/**
+ * Le gagnant laisse ses coordonnées. Si la même personne (e-mail ou téléphone) a déjà
+ * réclamé un gain aujourd'hui depuis un autre appareil, ce gain est annulé et le lot remis en jeu.
+ */
 export async function reclamer(_prev: EtatRoue, fd: FormData): Promise<EtatRoue> {
   const participationId = String(fd.get('participation_id') ?? '');
   const prenom = String(fd.get('prenom') ?? '').trim();
   const nom = String(fd.get('nom') ?? '').trim();
   const email = String(fd.get('email') ?? '').trim().toLowerCase();
-  const telephone = String(fd.get('telephone') ?? '').trim();
+  const telephone = normTel(String(fd.get('telephone') ?? ''));
   if (!prenom || !nom) return { erreur: 'Indiquez votre prénom et votre nom.' };
-  if (telephone.replace(/[\s.\-()]/g, '').length < 10) return { erreur: 'Numéro de téléphone invalide.' };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse e-mail invalide.' };
+  if (telephone.length < 10) return { erreur: 'Numéro de téléphone invalide.' };
   const id = await joueurId();
   const db = createAdminClient();
-  const { error } = await db.from('roue_participations')
-    .update({ prenom, nom, email, telephone: telephone || null, reclame_le: new Date().toISOString() })
-    .eq('id', participationId).eq('joueur_id', id).eq('gagne', true);
+
+  const { data: part } = await db.from('roue_participations').select('id, jour, gagne, reclame_le').eq('id', participationId).eq('joueur_id', id).eq('gagne', true).maybeSingle();
+  if (!part) return { erreur: 'Participation introuvable.' };
+  if (part.reclame_le) return { ok: 'Vos coordonnées sont déjà enregistrées.' };
+
+  // Même personne, même jour, déjà réclamé ?
+  const { data: doublon } = await db.from('roue_participations').select('id')
+    .eq('jour', part.jour).neq('id', part.id).not('reclame_le', 'is', null)
+    .or(`email.eq.${email},telephone.eq.${telephone}`).limit(1).maybeSingle();
+
+  const maintenant = new Date().toISOString();
+  if (doublon) {
+    await db.from('roue_participations').update({
+      prenom, nom, email, telephone, reclame_le: maintenant, lot_id: null,
+      annulee_le: maintenant, motif_annulation: 'Doublon : a déjà joué aujourd’hui sur un autre appareil',
+    }).eq('id', part.id);
+    return { annule: 'Vous avez déjà joué aujourd’hui sur un autre appareil. Ce lot est remis en jeu : la participation est limitée à une par jour et par personne. Revenez demain !' };
+  }
+
+  const { error } = await db.from('roue_participations').update({ prenom, nom, email, telephone, reclame_le: maintenant }).eq('id', part.id);
   if (error) return { erreur: 'Enregistrement impossible.' };
   return { ok: 'C’est noté ! Gardez votre code précieusement.' };
 }
@@ -170,6 +198,7 @@ export async function majModuleRoue(_prev: EtatRoue, fd: FormData): Promise<Etat
     accroche: String(fd.get('accroche') ?? '').trim(),
     periode_texte: String(fd.get('periode_texte') ?? '').trim(),
     participations_par_jour: Math.max(1, Number(fd.get('participations_par_jour') ?? 1)),
+    lots_max_par_joueur: Math.max(0, Number(fd.get('lots_max_par_joueur') ?? 1)),
     taux_gain: Math.min(100, Math.max(0, Number(fd.get('taux_gain') ?? 12))),
     message_gagne: String(fd.get('message_gagne') ?? '').trim(),
     message_perdu: String(fd.get('message_perdu') ?? '').trim(),

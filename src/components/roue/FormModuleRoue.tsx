@@ -44,6 +44,10 @@ export default function FormModuleRoue({ module: m, config: c }: { module: Modul
           <div className="field"><label htmlFor="participations_par_jour">Participations par jour et par personne</label><input id="participations_par_jour" name="participations_par_jour" type="number" min={1} max={10} defaultValue={c.participations_par_jour} /></div>
           <div className="field"><label htmlFor="taux_gain">Taux de tours gagnants (%)</label><input id="taux_gain" name="taux_gain" type="number" min={0} max={100} defaultValue={c.taux_gain} /></div>
         </div>
+        <div className="row2">
+          <div className="field"><label htmlFor="lots_max_par_joueur">Lots maximum par personne sur toute l&apos;opération (0 = illimité)</label><input id="lots_max_par_joueur" name="lots_max_par_joueur" type="number" min={0} max={20} defaultValue={c.lots_max_par_joueur} /></div>
+        </div>
+        <p style={{ color: '#6b6560', fontSize: '.85rem' }}>Un joueur ayant atteint ce maximum peut continuer à jouer chaque jour, mais ses tours sont perdants. À la réservation du lot, un e-mail ou un téléphone déjà utilisé pour un gain est refusé (protège contre PC + mobile).</p>
         <p style={{ color: '#6b6560', fontSize: '.85rem' }}>Un tour gagnant n&apos;attribue un lot que s&apos;il en reste en stock : sinon il devient perdant.</p>
       </div>
       <button className="btn btn-k" disabled={pending}>{pending ? 'Enregistrement…' : 'Enregistrer'}</button>

@@ -3,6 +3,7 @@ export type ConfigRoue = {
   accroche: string;
   periode_texte: string;
   participations_par_jour: number;
+  lots_max_par_joueur: number;  // 0 = illimité
   taux_gain: number;            // pourcentage de tours gagnants (0-100)
   message_gagne: string;
   message_perdu: string;
@@ -41,6 +42,8 @@ export type ParticipationRoue = {
   telephone: string | null;
   reclame_le: string | null;
   retire_le: string | null;
+  annulee_le: string | null;
+  motif_annulation: string | null;
   created_at: string;
   roue_lots?: { nom: string } | null;
 };
@@ -58,6 +61,7 @@ export const CONFIG_DEFAUT: ConfigRoue = {
   accroche: 'La rentrée aussi se fête à Limetz-Villez !',
   periode_texte: 'Du 7 au 20 septembre',
   participations_par_jour: 1,
+  lots_max_par_joueur: 0,
   taux_gain: 12,
   message_gagne: 'Présentez votre code au stand du Comité des Fêtes pour récupérer votre lot.',
   message_perdu: 'Pas de chance aujourd’hui… revenez demain tenter votre chance !',

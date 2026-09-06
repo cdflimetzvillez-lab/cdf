@@ -15,7 +15,7 @@ export default async function AdminRoue({ searchParams }: { searchParams: Promis
     supabase.from('roue_stats').select('*').single(),
     supabase.from('roue_lots').select('*').order('position'),
     supabase.from('roue_participations').select('*, roue_lots(nom)').eq('gagne', true).order('created_at', { ascending: false }),
-    supabase.from('roue_participations').select('lot_id').not('lot_id', 'is', null),
+    supabase.from('roue_participations').select('lot_id').not('lot_id', 'is', null).is('annulee_le', null),
   ]);
   const m = module as ModuleAccueil | null;
   if (!m) {
