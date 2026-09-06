@@ -200,6 +200,7 @@ export async function majModuleRoue(_prev: EtatRoue, fd: FormData): Promise<Etat
     participations_par_jour: Math.max(1, Number(fd.get('participations_par_jour') ?? 1)),
     lots_max_par_joueur: Math.max(0, Number(fd.get('lots_max_par_joueur') ?? 1)),
     taux_gain: Math.min(100, Math.max(0, Number(fd.get('taux_gain') ?? 12))),
+    pancarte: String(fd.get('pancarte') ?? '').trim().slice(0, 40),
     message_gagne: String(fd.get('message_gagne') ?? '').trim(),
     message_perdu: String(fd.get('message_perdu') ?? '').trim(),
   };

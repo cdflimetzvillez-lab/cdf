@@ -79,7 +79,7 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
             <h2 id="roue-titre">{c.titre}</h2>
             <p className="roue-accroche">{c.accroche}</p>
             <div className="roue-scene">
-              <Roue angle={angle} tourne={phase === 'tourne'} onClick={lancer} disabled={phase !== 'roue'} />
+              <Roue angle={angle} tourne={phase === 'tourne'} onClick={lancer} disabled={phase !== 'roue'} pancarte={c.pancarte} />
             </div>
             <p className="roue-touch">{phase === 'tourne' ? 'Bonne chance…' : '👆 Touchez la roue pour jouer'}</p>
             <p className="roue-mini">

@@ -34,6 +34,7 @@ export default function FormModuleRoue({ module: m, config: c }: { module: Modul
           <div className="field"><label htmlFor="titre">Titre</label><input id="titre" name="titre" defaultValue={c.titre} /></div>
           <div className="field"><label htmlFor="periode_texte">Période affichée</label><input id="periode_texte" name="periode_texte" defaultValue={c.periode_texte} /></div>
         </div>
+        <div className="field"><label htmlFor="pancarte">Pancarte au centre de la roue (2 lignes max, 40 caractères)</label><textarea id="pancarte" name="pancarte" rows={2} maxLength={40} defaultValue={c.pancarte} placeholder={"Tentez\nvotre chance !"} /></div>
         <div className="field"><label htmlFor="accroche">Accroche</label><input id="accroche" name="accroche" defaultValue={c.accroche} /></div>
         <div className="field"><label htmlFor="message_gagne">Message aux gagnants</label><textarea id="message_gagne" name="message_gagne" rows={2} defaultValue={c.message_gagne} /></div>
         <div className="field"><label htmlFor="message_perdu">Message aux perdants</label><textarea id="message_perdu" name="message_perdu" rows={2} defaultValue={c.message_perdu} /></div>

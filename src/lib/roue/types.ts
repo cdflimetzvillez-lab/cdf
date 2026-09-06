@@ -5,6 +5,7 @@ export type ConfigRoue = {
   participations_par_jour: number;
   lots_max_par_joueur: number;  // 0 = illimité
   taux_gain: number;            // pourcentage de tours gagnants (0-100)
+  pancarte: string;             // texte de la petite pancarte au centre de la roue
   message_gagne: string;
   message_perdu: string;
 };
@@ -63,6 +64,7 @@ export const CONFIG_DEFAUT: ConfigRoue = {
   participations_par_jour: 1,
   lots_max_par_joueur: 0,
   taux_gain: 12,
+  pancarte: 'Tentez\nvotre chance !',
   message_gagne: 'Présentez votre code au stand du Comité des Fêtes pour récupérer votre lot.',
   message_perdu: 'Pas de chance aujourd’hui… revenez demain tenter votre chance !',
 };

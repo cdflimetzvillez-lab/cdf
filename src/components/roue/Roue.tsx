@@ -20,7 +20,20 @@ function etoile(i: number) {
 }
 
 /** Roue de fête foraine : bois, ampoules, segments colorés sans texte. `angle` en degrés, animé par le parent. */
-export default function Roue({ angle, tourne, onClick, disabled }: { angle: number; tourne: boolean; onClick: () => void; disabled?: boolean }) {
+/** Découpe le texte de la pancarte en 2 lignes max (retour à la ligne manuel ou automatique). */
+function lignesPancarte(t: string): string[] {
+  const brut = t.trim();
+  if (!brut) return [];
+  if (brut.includes('\n')) return brut.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 2);
+  if (brut.length <= 14) return [brut];
+  const mots = brut.split(' ');
+  let l1 = '';
+  while (mots.length && (l1 + ' ' + mots[0]).trim().length <= 14) l1 = (l1 + ' ' + mots.shift()).trim();
+  return [l1 || mots.shift() || '', mots.join(' ')].filter(Boolean).slice(0, 2);
+}
+
+export default function Roue({ angle, tourne, onClick, disabled, pancarte = '' }: { angle: number; tourne: boolean; onClick: () => void; disabled?: boolean; pancarte?: string }) {
+  const lignes = lignesPancarte(pancarte);
   return (
     <button type="button" className={`roue-btn${tourne ? ' tourne' : ''}`} onClick={onClick} disabled={disabled} aria-label="Lancer la roue">
       <svg viewBox="0 0 340 340" className="roue-svg" aria-hidden="true">
@@ -57,6 +70,19 @@ export default function Roue({ angle, tourne, onClick, disabled }: { angle: numb
           <circle cx={CX} cy={CY} r="24" fill="#FFD400" stroke="#141014" strokeWidth="3" />
           <circle cx={CX} cy={CY} r="7" fill="#141014" />
         </g>
+
+        {/* pancarte fixe au centre */}
+        {lignes.length > 0 && (
+          <g className="roue-pancarte" style={{ transformOrigin: `${CX}px ${CY - 30}px` }}>
+            <line x1={CX - 22} y1={CY - 30} x2={CX - 14} y2={CY - 14} stroke="#3b220c" strokeWidth="2.5" />
+            <line x1={CX + 22} y1={CY - 30} x2={CX + 14} y2={CY - 14} stroke="#3b220c" strokeWidth="2.5" />
+            <rect x={CX - 52} y={CY - 16} width="104" height={lignes.length > 1 ? 44 : 32} rx="3" fill="url(#roue-bois)" stroke="#3b220c" strokeWidth="3" transform={`rotate(-4 ${CX} ${CY})`} />
+            <circle cx={CX - 44} cy={CY - 9} r="2" fill="#3b220c" /><circle cx={CX + 44} cy={CY - 9} r="2" fill="#3b220c" />
+            <text x={CX} y={lignes.length > 1 ? CY - 1 : CY + 5} textAnchor="middle" fill="#FFD400" fontFamily="Anton, Impact, sans-serif" fontSize="13" letterSpacing=".04em" transform={`rotate(-4 ${CX} ${CY})`} style={{ textTransform: 'uppercase' }}>
+              {lignes.map((l, i) => <tspan key={i} x={CX} dy={i === 0 ? 0 : 15}>{l}</tspan>)}
+            </text>
+          </g>
+        )}
 
         {/* pointeur */}
         <polygon points={`${CX - 16},14 ${CX + 16},14 ${CX},50`} fill="#FF3D7F" stroke="#141014" strokeWidth="3" />

@@ -39,7 +39,7 @@ export default function TestRoue({ config: c }: { config: ConfigRoue }) {
         <h2 style={{ color: 'var(--jaune)', fontSize: '2rem', margin: '.6rem 0' }}>{c.titre}</h2>
         <p style={{ fontWeight: 700, marginBottom: '1rem' }}>{c.accroche}</p>
         <div className="roue-scene" style={{ ['--roue-duree' as string]: `${DUREE}ms` }}>
-          <Roue angle={angle} tourne={tourne} onClick={lancer} disabled={tourne} />
+          <Roue angle={angle} tourne={tourne} onClick={lancer} disabled={tourne} pancarte={c.pancarte} />
         </div>
         <p className="roue-touch">{tourne ? 'Bonne chance…' : '👆 Cliquez sur la roue pour tester'}</p>
       </div>
