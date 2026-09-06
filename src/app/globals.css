@@ -41,6 +41,7 @@ a{color:inherit;}
 .menu-nav a:nth-child(2):hover{color:var(--rose);}
 .menu-nav a:nth-child(3):hover{color:var(--cyan);}
 .menu-nav a:nth-child(4):hover{color:var(--violet);}
+.menu-nav a:nth-child(5):hover{color:var(--jaune);}
 .menu-nav a:hover{transform:translateX(14px);}
 .menu-foot{position:absolute;bottom:2rem;left:2rem;color:#7d757d;}
 
