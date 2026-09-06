@@ -15,12 +15,13 @@ export const revalidate = 60;
 export default async function Home() {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig, { data: partenaires }] = await Promise.all([
+  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig, { data: partenaires }, { data: tdn }] = await Promise.all([
     supabase.from('site_settings').select('*').eq('id', 1).single(),
     supabase.from('stats').select('*').order('position'),
     supabase.from('evenements').select('*').eq('publie', true).order('position'),
     getWheelConfig(),
     supabase.from('partenaires').select('*').eq('actif', true).order('position'),
+    supabase.from('tdn_reglages').select('module_actif').eq('id', 1).maybeSingle(),
   ]);
   // Module événementiel : rendu côté serveur uniquement si actif et dans la période.
   const showWheel = roueVisible(wheelConfig);
@@ -30,7 +31,7 @@ export default async function Home() {
 
   return (
     <>
-      <MenuButton />
+      <MenuButton tresors={tdn?.module_actif !== false} />
       <RetourHaut />
 
       <header className="hero" style={{ ['--evt' as string]: s.hero_couleur }}>

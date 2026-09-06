@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BasculeModuleTdn from '@/components/tresors/BasculeModuleTdn';
 import { requireAdmin } from '@/lib/supabase/server';
 import { euros } from '@/lib/sumup';
 import type { Stats } from '@/lib/tresors/types';
@@ -24,6 +25,7 @@ export default async function AdminTresors() {
         </div>
       </div>
 
+      <BasculeModuleTdn actif={reglages?.module_actif !== false} />
       <div className="kpi">
         <div><b>{s.inscrits ?? 0} / {reglages?.places_max ?? '—'}</b><span>Places réservées</span></div>
         <div><b>{euros(s.ca_centimes ?? 0)}</b><span>Chiffre d&apos;affaires</span></div>

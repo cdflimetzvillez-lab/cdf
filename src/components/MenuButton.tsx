@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-export default function MenuButton() {
+export default function MenuButton({ tresors = true }: { tresors?: boolean }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function MenuButton() {
           <nav className="menu-nav" onClick={() => setOpen(false)}>
             <Link href="/">Accueil</Link>
             <Link href="/#evenements">Programme</Link>
-            <Link href="/tresors-de-noel">Trésors de Noël</Link>
+            {tresors && <Link href="/tresors-de-noel">Trésors de Noël</Link>}
             <Link href="/#association">L&apos;association</Link>
             <Link href="/#benevoles">Bénévoles</Link>
           </nav>

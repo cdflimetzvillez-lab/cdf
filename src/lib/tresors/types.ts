@@ -21,6 +21,7 @@ export type Reglages = {
   lieu_revelation: string;
   tirage_cle_id: string | null;
   tirage_le: string | null;
+  module_actif: boolean;
 };
 
 export type Partenaire = { id: string; nom: string; type: string | null };

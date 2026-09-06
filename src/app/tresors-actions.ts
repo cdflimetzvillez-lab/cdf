@@ -489,3 +489,12 @@ export async function annulerTirage() {
   await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_le: null }).eq('id', 1);
   chemins();
 }
+
+/** Interrupteur général : retire le module du menu et des pages publiques (les données sont conservées). */
+export async function basculerModuleTdn(actif: boolean) {
+  const sb = await admin();
+  await sb.from('tdn_reglages').update({ module_actif: actif }).eq('id', 1);
+  chemins();
+  revalidatePath('/');
+  revalidatePath('/evenements', 'layout');
+}
