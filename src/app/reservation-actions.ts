@@ -288,3 +288,24 @@ export async function supprimerReservation(id: string) {
   await supabase.from('reservations').delete().eq('id', id);
   revalidatePath('/admin/reservations');
 }
+
+/** Admin : force une vérification auprès de SumUp pour une réservation (ou toutes celles en attente). */
+export async function verifierSumUpAdmin(reference?: string): Promise<{ verifiees: number; changees: number; erreur?: string }> {
+  const { supabase, isAdmin } = await requireAdmin();
+  if (!isAdmin) return { verifiees: 0, changees: 0, erreur: 'Accès refusé.' };
+  let refs: string[] = [];
+  if (reference) refs = [reference];
+  else {
+    const { data } = await supabase.from('reservations').select('reference').eq('statut', 'en_attente').not('checkout_id', 'is', null);
+    refs = (data ?? []).map((r) => r.reference);
+  }
+  let changees = 0;
+  for (const ref of refs) {
+    const db = createAdminClient();
+    const { data: avant } = await db.from('reservations').select('statut').eq('reference', ref).maybeSingle();
+    const apres = await verifierPaiement(ref);
+    if (apres && avant && apres.statut !== avant.statut) changees++;
+  }
+  revalidatePath('/admin/reservations');
+  return { verifiees: refs.length, changees };
+}

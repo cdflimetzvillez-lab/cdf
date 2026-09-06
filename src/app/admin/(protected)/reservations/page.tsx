@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 import { euros } from '@/lib/sumup';
 import LigneReservation from '@/components/LigneReservation';
 import ExportCsv from '@/components/ExportCsv';
+import VerifierSumUp from '@/components/VerifierSumUp';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,10 @@ export default async function Reservations({
           <h1>Réservations</h1>
           <p>Suivi des paiements SumUp, pointage et liste d&apos;émargement.</p>
         </div>
-        <ExportCsv reservations={liste} evenements={evenements ?? []} />
+        <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <VerifierSumUp nb={liste.filter((r) => r.statut === 'en_attente' && r.checkout_id).length} />
+          <ExportCsv reservations={liste} evenements={evenements ?? []} />
+        </div>
       </div>
 
       <div className="kpi">

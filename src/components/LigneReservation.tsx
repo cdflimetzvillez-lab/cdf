@@ -1,6 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { marquerScanne, changerStatutResa, supprimerReservation } from '@/app/reservation-actions';
+import { marquerScanne, changerStatutResa, supprimerReservation, verifierSumUpAdmin } from '@/app/reservation-actions';
 import Confirmation from '@/components/Confirmation';
 
 const euros = (c: number) =>
@@ -14,6 +14,7 @@ const LIBELLES: Record<string, string> = {
 export default function LigneReservation({ resa }: { resa: any }) {
   const [pending, start] = useTransition();
   const [confirme, setConfirme] = useState(false);
+  const [verif, setVerif] = useState('');
 
   return (
     <>
@@ -70,8 +71,15 @@ export default function LigneReservation({ resa }: { resa: any }) {
             ))}
           </select>
         </td>
-        <td style={{ textAlign: 'right' }}>
+        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+          {resa.statut === 'en_attente' && resa.checkout_id && (
+            <button className="btn btn-y btn-sm" title="Interroger SumUp et mettre le statut à jour" style={{ marginRight: '.4rem' }}
+              onClick={() => start(async () => { const r = await verifierSumUpAdmin(resa.reference); setVerif(r.changees ? 'Statut mis à jour' : 'Toujours en attente côté SumUp'); })}>
+              Vérifier SumUp
+            </button>
+          )}
           <button className="btn btn-w btn-sm" onClick={() => setConfirme(true)}>Suppr.</button>
+          {verif && <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.3rem' }}>{verif}</div>}
         </td>
       </tr>
 
