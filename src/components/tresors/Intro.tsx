@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Neige from './Neige';
 import Village from './Village';
+import Traineau from './Traineau';
 
 const PHRASES = [
   "Cette année, quelque chose s'est passé à Limetz-Villez…",
@@ -37,11 +38,7 @@ export default function Intro({ titre, onFin }: { titre: string; onFin: () => vo
       <div className="tdn-etoiles" aria-hidden="true" />
       <Neige flocons={50} />
       <div className="tdn-halo" aria-hidden="true" />
-      <svg className="tdn-traineau" viewBox="0 0 120 40" aria-hidden="true">
-        <path d="M2 30 Q10 34 24 30 L28 22 L54 22 L58 30 Q66 34 80 30" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M84 30 l6 -8 l6 8 M96 30 l6 -8 l6 8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx="106" cy="20" r="2" fill="currentColor" />
-      </svg>
+      <Traineau className="tdn-traineau" />
       <Village />
 
       <div className="tdn-intro-texte" aria-live="polite">

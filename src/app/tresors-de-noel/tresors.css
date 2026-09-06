@@ -66,9 +66,9 @@
   display:flex;align-items:center;justify-content:center;overflow:hidden;
   transition:opacity .7s ease;}
 .tdn-intro.sortie{opacity:0;pointer-events:none;}
-.tdn-traineau{position:absolute;top:14%;left:-140px;width:110px;color:rgba(251,247,239,.55);
-  animation:tdn-traineau 9s ease-in-out 1.2s forwards;}
-@keyframes tdn-traineau{0%{left:-140px;top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:110%;top:8%;opacity:0}}
+.tdn-traineau{position:absolute;top:14%;left:-340px;width:clamp(200px,45vw,320px);height:auto;color:rgba(251,247,239,.7);
+  filter:drop-shadow(0 0 14px rgba(229,192,123,.45));animation:tdn-traineau 10s ease-in-out 1.2s forwards;}
+@keyframes tdn-traineau{0%{left:-340px;top:18%;opacity:0}8%{opacity:1}92%{opacity:1}100%{left:110%;top:6%;opacity:0}}
 .tdn-intro-texte{position:relative;z-index:2;padding:0 1.6rem;text-align:center;max-width:36rem;}
 .tdn-intro-phrase{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(1.6rem,6vw,2.6rem);
   font-weight:500;font-style:italic;line-height:1.25;color:var(--tdn-creme);
