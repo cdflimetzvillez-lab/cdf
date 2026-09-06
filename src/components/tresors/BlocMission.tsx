@@ -9,6 +9,10 @@ export default function BlocMission({ bloc }: { bloc: Bloc }) {
       return (
         <figure className="tdn-media">
           <div className="tdn-media-img" role="img" aria-label={bloc.alt}>
+            {bloc.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bloc.src} alt={bloc.alt} style={{ display: 'block', width: '100%', height: 'auto' }} />
+            ) : (
             <svg viewBox="0 0 320 180" aria-hidden="true">
               <rect width="320" height="180" fill="#0f2150" />
               <circle cx="160" cy="80" r="46" fill="none" stroke="#e5c07b" strokeWidth="4" />
@@ -16,6 +20,7 @@ export default function BlocMission({ bloc }: { bloc: Bloc }) {
               <line x1="160" y1="80" x2="182" y2="92" stroke="#e5c07b" strokeWidth="4" strokeLinecap="round" />
               <text x="160" y="152" textAnchor="middle" fill="#e5c07b" fontSize="14" fontFamily="DM Mono, monospace" letterSpacing="3">PHOTO DU LIEU</text>
             </svg>
+            )}
           </div>
           {bloc.legende && <figcaption>{bloc.legende}</figcaption>}
         </figure>

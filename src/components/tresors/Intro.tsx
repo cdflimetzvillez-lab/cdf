@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import Neige from './Neige';
 import Village from './Village';
-import { EVENEMENT } from '@/lib/tresors/mock';
 
 const PHRASES = [
   "Cette année, quelque chose s'est passé à Limetz-Villez…",
@@ -11,7 +10,7 @@ const PHRASES = [
 ];
 const CADENCE = 2300; // ms par phrase
 
-export default function Intro({ onFin }: { onFin: () => void }) {
+export default function Intro({ titre, onFin }: { titre: string; onFin: () => void }) {
   const [etape, setEtape] = useState(0);      // 0..2 phrases, 3 titre, 4 sortie
   const [sortie, setSortie] = useState(false);
 
@@ -50,7 +49,7 @@ export default function Intro({ onFin }: { onFin: () => void }) {
         {etape >= 3 && (
           <h1 className="tdn-intro-titre">
             <span className="tdn-scintille">✦</span>
-            {EVENEMENT.titre}
+            {titre}
             <span className="tdn-scintille tdn-scintille-2">✦</span>
           </h1>
         )}

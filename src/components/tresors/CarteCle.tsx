@@ -1,5 +1,5 @@
 import type { Cle } from '@/lib/tresors/types';
-import { EVENEMENT } from '@/lib/tresors/mock';
+import { numeroCle } from '@/lib/tresors/types';
 
 /** QR code purement décoratif (motif pseudo-aléatoire déterministe). */
 function FauxQR({ graine }: { graine: string }) {
@@ -27,19 +27,19 @@ function FauxQR({ graine }: { graine: string }) {
   );
 }
 
-export default function CarteCle({ cle, prenom, grande = false }: { cle: Cle; prenom: string; grande?: boolean }) {
+export default function CarteCle({ cle, prenom, marche, grande = false }: { cle: Cle; prenom: string; marche: string; grande?: boolean }) {
   return (
     <div className={`tdn-cle${grande ? ' tdn-cle-grande' : ''}`}>
       <div className="tdn-cle-brillance" aria-hidden="true" />
       <div className="tdn-cle-haut">
         <span className="tdn-sur">Clé virtuelle</span>
-        <span className={`tdn-pastille ${cle.revelee ? 'tdn-pastille-ok' : ''}`}>{cle.revelee ? 'Révélée' : 'Non révélée'}</span>
+        <span className={`tdn-pastille ${cle.revelee_le ? 'tdn-pastille-ok' : ''}`}>{cle.revelee_le ? 'Révélée' : 'Non révélée'}</span>
       </div>
       <svg className="tdn-cle-icone" viewBox="0 0 64 32" aria-hidden="true">
         <circle cx="13" cy="16" r="9" fill="none" stroke="currentColor" strokeWidth="3.5" />
         <path d="M22 16 H58 M50 16 v8 M42 16 v6" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" fill="none" />
       </svg>
-      <div className="tdn-cle-num">CLÉ N° {cle.numero}</div>
+      <div className="tdn-cle-num">CLÉ N° {numeroCle(cle.numero)}</div>
       <div className="tdn-sur">Code secret</div>
       <div className="tdn-cle-code">{cle.code}</div>
       <div className="tdn-cle-bas">
@@ -48,7 +48,7 @@ export default function CarteCle({ cle, prenom, grande = false }: { cle: Cle; pr
           <b>{prenom}</b>
           <div className="tdn-sur" style={{ marginTop: '.6rem' }}>Événement</div>
           <b>Marché de Noël</b>
-          <small>{EVENEMENT.marche}</small>
+          <small>{marche}</small>
         </div>
         <FauxQR graine={cle.numero + cle.code} />
       </div>
