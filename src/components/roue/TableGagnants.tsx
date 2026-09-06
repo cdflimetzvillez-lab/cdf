@@ -27,7 +27,7 @@ export default function TableGagnants({ lignes }: { lignes: ParticipationRoue[] 
               <td>{fmt(l.created_at)}</td><td className="mono">{l.code}</td><td>{l.roue_lots?.nom ?? '—'}</td>
               <td>{l.prenom ? `${l.prenom} ${l.nom ?? ''}` : <span style={{ color: '#6b6560' }}>non renseigné</span>}</td>
               <td style={{ fontSize: '.8rem' }}>{l.email}<br />{l.telephone}</td>
-              <td>{l.annulee_le ? <span className="pill off" title={l.motif_annulation ?? ''}>annulé · doublon</span> : <span className="pill on">valide</span>}</td>
+              <td>{l.annulee_le ? <span className="pill off" title={l.motif_annulation ?? ''}>annulé · {l.motif_annulation?.startsWith('Non réclamé') ? 'non réclamé' : 'doublon'}</span> : (l.reclame_le ? <span className="pill on">valide</span> : <span className="pill new">en attente de coordonnées</span>)}</td>
               <td>{l.annulee_le ? '—' : <button className={`pill ${l.retire_le ? 'done' : 'off'}`} style={{ cursor: 'pointer' }} onClick={() => start(() => marquerRetire(l.id, !l.retire_le))}>{l.retire_le ? 'oui' : 'non'}</button>}</td>
             </tr>
           ))}

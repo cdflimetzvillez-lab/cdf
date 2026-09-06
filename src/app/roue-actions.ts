@@ -68,6 +68,17 @@ export type ResultatTour =
   | { statut: 'ferme'; message: string }
   | { statut: 'erreur'; message: string };
 
+const DELAI_RECLAMATION_MIN = 30;
+
+/** Annule les gains non réclamés depuis plus de 30 min : le lot retourne dans le stock. */
+async function purgerGainsNonReclames() {
+  const db = createAdminClient();
+  const limite = new Date(Date.now() - DELAI_RECLAMATION_MIN * 60 * 1000).toISOString();
+  await db.from('roue_participations')
+    .update({ lot_id: null, annulee_le: new Date().toISOString(), motif_annulation: 'Non réclamé : coordonnées non renseignées dans les 30 minutes' })
+    .eq('gagne', true).is('reclame_le', null).is('annulee_le', null).lt('created_at', limite);
+}
+
 /** Le joueur a-t-il déjà utilisé ses tours du jour ? (pour ne pas rouvrir le pop-up) */
 export async function statutJoueur(): Promise<{ peutJouer: boolean }> {
   const module = await getWheelConfig();
@@ -86,6 +97,7 @@ export async function jouer(): Promise<ResultatTour> {
   if (!roueVisible(module)) return { statut: 'ferme', message: 'La roue n’est pas disponible pour le moment.' };
   const cfg = configRoue(module);
   const db = createAdminClient();
+  await purgerGainsNonReclames();
   const id = await joueurId();
   const ip = await ipHash();
   const jour = jourParis();
@@ -140,9 +152,10 @@ export async function reclamer(_prev: EtatRoue, fd: FormData): Promise<EtatRoue>
   const id = await joueurId();
   const db = createAdminClient();
 
-  const { data: part } = await db.from('roue_participations').select('id, jour, gagne, reclame_le').eq('id', participationId).eq('joueur_id', id).eq('gagne', true).maybeSingle();
+  const { data: part } = await db.from('roue_participations').select('id, jour, gagne, reclame_le, annulee_le').eq('id', participationId).eq('joueur_id', id).eq('gagne', true).maybeSingle();
   if (!part) return { erreur: 'Participation introuvable.' };
   if (part.reclame_le) return { ok: 'Vos coordonnées sont déjà enregistrées.' };
+  if (part.annulee_le) return { annule: 'Ce gain a expiré : les coordonnées devaient être renseignées dans les 30 minutes. Le lot est remis en jeu, revenez demain !' };
 
   // Même personne, même jour, déjà réclamé ?
   const { data: doublon } = await db.from('roue_participations').select('id')
@@ -248,6 +261,9 @@ export async function jouerTest(): Promise<ResultatTour> {
     ? { statut: 'ok', participationId: 'test', gagne: true, segment, lot: { nom: lot!.nom, description: lot!.description }, code: 'RR-TEST' }
     : { statut: 'ok', participationId: 'test', gagne: false, segment };
 }
+
+/** Appelé par la page admin pour appliquer la purge avant affichage. */
+export async function purgerGainsAdmin() { await admin(); await purgerGainsNonReclames(); }
 
 export async function marquerRetire(id: string, retire: boolean) {
   const sb = await admin();

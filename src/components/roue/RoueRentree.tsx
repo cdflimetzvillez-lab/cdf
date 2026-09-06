@@ -22,6 +22,8 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
   const [phase, setPhase] = useState<Phase>('roue');
   const [resultat, setResultat] = useState<ResultatTour | null>(null);
   const toursRef = useRef(0);
+  const [reclame, setReclame] = useState(false);
+  const verrouille = phase === 'tourne' || (phase === 'gagne' && !reclame);
 
   useEffect(() => {
     statutJoueur().then(({ peutJouer }) => {
@@ -33,14 +35,14 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
   useEffect(() => {
     if (!ouvert) return;
     document.body.style.overflow = 'hidden';
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && phase !== 'tourne' && fermer();
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && !verrouille && fermer();
     window.addEventListener('keydown', esc);
     return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ouvert, phase]);
+  }, [ouvert, phase, reclame]);
 
   function fermer() {
-    if (phase === 'tourne') return;
+    if (verrouille) return;
     sessionStorage.setItem(CLE_FERME, '1');
     setOuvert(false);
     if (phase !== 'roue') setPeutJouer(false);
@@ -71,7 +73,7 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
   return (
     <div className="roue-fond" role="dialog" aria-modal="true" aria-labelledby="roue-titre">
       <div className="roue-pop" style={{ ['--roue-duree' as string]: `${DUREE}ms` }}>
-        {phase !== 'tourne' && <button className="roue-x" onClick={fermer} aria-label="Fermer">✕</button>}
+        {!verrouille && <button className="roue-x" onClick={fermer} aria-label="Fermer">✕</button>}
 
         {(phase === 'roue' || phase === 'tourne') && (
           <>
@@ -99,7 +101,7 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
         )}
 
         {phase === 'gagne' && resultat?.statut === 'ok' && (
-          <Gagne resultat={resultat} message={c.message_gagne} onFermer={fermer} />
+          <Gagne resultat={resultat} message={c.message_gagne} onFermer={fermer} onReclame={() => setReclame(true)} />
         )}
 
         {phase === 'info' && resultat && resultat.statut !== 'ok' && (
@@ -115,8 +117,8 @@ export default function RoueRentree({ config: c }: { config: ConfigRoue }) {
   );
 }
 
-function Gagne({ resultat, message, onFermer }: { resultat: Extract<ResultatTour, { statut: 'ok' }>; message: string; onFermer: () => void }) {
-  const [etat, action, pending] = useActionState<EtatRoue, FormData>(reclamer, null);
+function Gagne({ resultat, message, onFermer, onReclame }: { resultat: Extract<ResultatTour, { statut: 'ok' }>; message: string; onFermer: () => void; onReclame: () => void }) {
+  const [etat, action, pending] = useActionState<EtatRoue, FormData>(async (p, fd) => { const r = await reclamer(p, fd); if (r?.ok || r?.annule) onReclame(); return r; }, null);
   return (
     <div className="roue-resultat roue-gagne">
       <div className="roue-confettis" aria-hidden="true">{Array.from({ length: 18 }).map((_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * .12}s` }} />)}</div>
@@ -140,7 +142,7 @@ function Gagne({ resultat, message, onFermer }: { resultat: Extract<ResultatTour
         <form action={action} className="roue-form">
           <input type="hidden" name="participation_id" value={resultat.participationId} />
           {etat?.erreur && <div className="msg ko">{etat.erreur}</div>}
-          <p className="roue-form-aide">Vos coordonnées pour que l&apos;on garde votre lot de côté :</p>
+          <p className="roue-form-aide"><b>Renseignez vos coordonnées pour réserver votre lot.</b> Sans cela, le gain expire dans 30 minutes et le lot est remis en jeu.</p>
           <div className="row2">
             <div className="field"><label htmlFor="rr-prenom">Prénom</label><input id="rr-prenom" name="prenom" required autoComplete="given-name" /></div>
             <div className="field"><label htmlFor="rr-nom">Nom</label><input id="rr-nom" name="nom" required autoComplete="family-name" /></div>

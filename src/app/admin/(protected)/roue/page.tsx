@@ -5,11 +5,13 @@ import GestionLotsRoue from '@/components/roue/GestionLotsRoue';
 import TableGagnants from '@/components/roue/TableGagnants';
 import TestRoue from '@/components/roue/TestRoue';
 import { configRoue, roueVisible } from '@/lib/roue/db';
+import { purgerGainsAdmin } from '@/app/roue-actions';
 import type { LotRoue, ModuleAccueil, ParticipationRoue, StatsRoue } from '@/lib/roue/types';
 
 export default async function AdminRoue({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
   const { onglet = 'apercu' } = await searchParams;
   const { supabase } = await requireAdmin();
+  await purgerGainsAdmin();
   const [{ data: module }, { data: stats }, { data: lots }, { data: gagnants }, { data: attribs }] = await Promise.all([
     supabase.from('homepage_modules').select('*').eq('module_key', 'roue_rentree').maybeSingle(),
     supabase.from('roue_stats').select('*').single(),
