@@ -405,3 +405,28 @@
 .tdn-reglement p{line-height:1.65;margin-bottom:.8rem;color:var(--tdn-texte);}
 .tdn-reglement b{color:var(--tdn-creme);}
 .tdn-reglement-lots{margin:0 0 1rem 1.3rem;line-height:1.7;color:var(--tdn-texte);}
+
+/* ---------- Tirage du grand trésor ---------- */
+.tdn-tirage{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;padding:2rem 1.5rem;overflow:hidden;text-align:center;
+  background:radial-gradient(ellipse at 50% 30%,var(--tdn-nuit-3),var(--tdn-nuit) 70%);}
+.tdn-tirage-inner{position:relative;z-index:2;width:100%;max-width:80rem;display:flex;flex-direction:column;align-items:center;}
+.tdn-tirage-halo{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.5s;
+  background:radial-gradient(circle at 50% 50%,rgba(229,192,123,.45) 0%,rgba(229,192,123,.1) 30%,transparent 60%);}
+.tdn-tirage.fini .tdn-tirage-halo{opacity:1;}
+.tdn-tirage-admin{position:fixed;top:1rem;right:1rem;z-index:5;display:flex;gap:.5rem;font-size:.75rem;color:var(--tdn-muted);}
+.tdn-tirage-admin span,.tdn-tirage-admin a{padding:.4rem .7rem;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(8,20,48,.6);text-decoration:none;}
+.tdn-tirage-compteur{margin-top:1rem;font-family:'DM Mono',monospace;color:var(--tdn-muted);font-size:clamp(.9rem,1.6vw,1.2rem);}
+.tdn-tirage-compteur b{color:var(--tdn-or);font-size:1.5em;}
+.tdn-mur{margin:1.6rem auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:.5rem;width:100%;max-height:42vh;overflow:auto;padding:.6rem;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to bottom,#000 75%,transparent);mask-image:linear-gradient(to bottom,#000 75%,transparent);}
+.tdn-cle-tuile{font-family:'DM Mono',monospace;font-size:clamp(.9rem,1.5vw,1.2rem);padding:.55rem .3rem;border:1px solid rgba(229,192,123,.3);border-radius:8px;background:rgba(255,255,255,.04);color:var(--tdn-creme);transition:transform .15s,background .15s;}
+.tdn-cle-tuile small{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:.7em;color:var(--tdn-muted);margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tdn-cle-tuile.on{background:var(--tdn-or);color:var(--tdn-nuit);transform:scale(1.15);box-shadow:0 0 30px rgba(229,192,123,.7);position:relative;z-index:2;}
+.tdn-cle-tuile.on small{color:rgba(8,20,48,.7);}
+.tdn-tambour{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(6rem,22vw,16rem);line-height:1;color:var(--tdn-creme);text-shadow:0 0 60px rgba(229,192,123,.6);letter-spacing:.05em;font-variant-numeric:tabular-nums;}
+.tdn-tambour span{display:inline-block;min-width:.62em;}
+.tdn-tirage-resultat{animation:tdn-apparait 1s ease both;}
+.tdn-gagnant{margin:1.2rem 0 .6rem;padding:2rem 3rem;border-radius:26px;border:2px solid var(--tdn-or);background:rgba(255,255,255,.06);box-shadow:0 0 90px rgba(229,192,123,.45);}
+.tdn-gagnant-num{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(3rem,12vw,9rem);line-height:1;color:var(--tdn-creme);text-shadow:0 0 50px rgba(229,192,123,.6);}
+.tdn-gagnant-nom{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.6rem,4vw,3rem);color:var(--tdn-or);margin-top:.3rem;}
+.tdn-gagnant-famille{color:var(--tdn-muted);font-size:clamp(1rem,2vw,1.4rem);}

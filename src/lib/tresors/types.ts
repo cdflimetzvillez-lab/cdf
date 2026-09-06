@@ -19,6 +19,8 @@ export type Reglages = {
   grand_tresor_montant: string;
   grand_tresor_texte: string;
   lieu_revelation: string;
+  tirage_cle_id: string | null;
+  tirage_le: string | null;
 };
 
 export type Partenaire = { id: string; nom: string; type: string | null };

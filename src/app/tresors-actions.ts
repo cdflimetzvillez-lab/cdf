@@ -446,3 +446,46 @@ export async function supprimerParticipantAdmin(id: string) {
 }
 
 export { numeroCle };
+
+
+/* =========================================================
+   TIRAGE DU GRAND TRÉSOR (écran admin)
+   ========================================================= */
+export type ResultatTirage = { ok: true; cleId: string; numero: number; prenom: string; famille: string; deja: boolean } | { ok: false; erreur: string };
+
+/** Tire au sort une clé parmi toutes les clés générées, attribue le lot « grand trésor » et verrouille le résultat. */
+export async function tirerGrandTresor(): Promise<ResultatTirage> {
+  await admin();
+  const db = createAdminClient();
+  const { data: r } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single();
+  const lireGagnant = async (id: string) => {
+    const { data: c } = await db.from('tdn_cles').select('id, numero, tdn_participants(prenom, tdn_comptes(prenom, nom))').eq('id', id).single();
+    const p = c?.tdn_participants as unknown as { prenom: string; tdn_comptes: { prenom: string; nom: string } | null } | null;
+    return { cleId: c!.id, numero: c!.numero, prenom: p?.prenom ?? '', famille: p?.tdn_comptes ? `${p.tdn_comptes.prenom} ${p.tdn_comptes.nom}` : '' };
+  };
+  if (r?.tirage_cle_id) return { ok: true, ...(await lireGagnant(r.tirage_cle_id)), deja: true };
+
+  const { data: cles } = await db.from('tdn_cles').select('id');
+  if (!cles || cles.length === 0) return { ok: false, erreur: 'Aucune clé générée : personne n’a terminé le jeu.' };
+  const { data: grand } = await db.from('tdn_lots').select('id').eq('grand', true).order('position').limit(1).maybeSingle();
+  if (!grand) return { ok: false, erreur: 'Aucun lot marqué « grand trésor » dans les lots.' };
+
+  const gagnante = cles[Math.floor(Math.random() * cles.length)];
+  const maintenant = new Date().toISOString();
+  // Verrou : on n’écrit que si aucun tirage n’a été enregistré entre-temps.
+  const { data: maj } = await db.from('tdn_reglages').update({ tirage_cle_id: gagnante.id, tirage_le: maintenant }).eq('id', 1).is('tirage_cle_id', null).select('tirage_cle_id').maybeSingle();
+  if (!maj) { const { data: r2 } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single(); return { ok: true, ...(await lireGagnant(r2!.tirage_cle_id!)), deja: true }; }
+  await db.from('tdn_cles').update({ lot_id: grand.id }).eq('id', gagnante.id);
+  chemins();
+  return { ok: true, ...(await lireGagnant(gagnante.id)), deja: false };
+}
+
+/** Annule le tirage (retire le grand trésor de la clé) pour pouvoir le relancer. */
+export async function annulerTirage() {
+  await admin();
+  const db = createAdminClient();
+  const { data: r } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single();
+  if (r?.tirage_cle_id) await db.from('tdn_cles').update({ lot_id: null, revelee_le: null }).eq('id', r.tirage_cle_id);
+  await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_le: null }).eq('id', 1);
+  chemins();
+}
