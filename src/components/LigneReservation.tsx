@@ -19,7 +19,7 @@ export default function LigneReservation({ resa }: { resa: any }) {
   return (
     <>
       <tr style={{ opacity: pending ? .5 : 1 }}>
-        <td>
+        <td data-l="Acheteur" className="bloc">
           <strong>{resa.nom}</strong><br />
           <a href={`mailto:${resa.email}`} style={{ color: '#6b6560', fontSize: '.8rem' }}>
             {resa.email}
@@ -33,8 +33,8 @@ export default function LigneReservation({ resa }: { resa: any }) {
             </span></>
           )}
         </td>
-        <td style={{ fontSize: '.85rem' }}>{resa.evenements?.titre}</td>
-        <td>
+        <td data-l="Événement" style={{ fontSize: '.85rem' }}>{resa.evenements?.titre}</td>
+        <td data-l="Places">
           {resa.places}
           {resa.reservation_lignes?.length > 1 && (
             <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
@@ -44,8 +44,8 @@ export default function LigneReservation({ resa }: { resa: any }) {
             </div>
           )}
         </td>
-        <td>{euros(resa.montant_centimes)}</td>
-        <td>
+        <td data-l="Montant">{euros(resa.montant_centimes)}</td>
+        <td data-l="Billet">
           <code style={{ fontSize: '.8rem', fontWeight: 700 }}>{resa.code_billet}</code>
           {resa.statut === 'payee' && (
             <div style={{ marginTop: '.3rem' }}>
@@ -60,7 +60,7 @@ export default function LigneReservation({ resa }: { resa: any }) {
             </div>
           )}
         </td>
-        <td>
+        <td data-l="Statut">
           <select
             defaultValue={resa.statut}
             onChange={(e) => start(() => { changerStatutResa(resa.id, e.target.value); })}
@@ -71,7 +71,7 @@ export default function LigneReservation({ resa }: { resa: any }) {
             ))}
           </select>
         </td>
-        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+        <td className="actions">
           {resa.statut === 'en_attente' && resa.checkout_id && (
             <button className="btn btn-y btn-sm" title="Interroger SumUp et mettre le statut à jour" style={{ marginRight: '.4rem' }}
               onClick={() => start(async () => { const r = await verifierSumUpAdmin(resa.reference); setVerif(r.changees ? 'Statut mis à jour' : 'Toujours en attente côté SumUp'); })}>

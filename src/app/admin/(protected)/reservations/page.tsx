@@ -56,7 +56,7 @@ export default async function Reservations({
       {(suivi ?? []).length > 0 && (
         <div className="panel">
           <h2>Par événement</h2>
-          <table className="tbl">
+          <table className="tbl cartes compact">
             <thead>
               <tr>
                 <th>Événement</th><th>Vendues</th><th>Jauge</th>
@@ -66,9 +66,9 @@ export default async function Reservations({
             <tbody>
               {(suivi as any[]).map((s) => (
                 <tr key={s.id}>
-                  <td><strong>{s.titre}</strong></td>
-                  <td>{s.places_vendues}</td>
-                  <td>
+                  <td data-l="Événement" className="bloc"><strong>{s.titre}</strong></td>
+                  <td data-l="Vendues">{s.places_vendues}</td>
+                  <td data-l="Jauge" className="bloc">
                     {s.places_max
                       ? <>{s.places_vendues} / {s.places_max}
                           <div className="jauge">
@@ -79,8 +79,8 @@ export default async function Reservations({
                         </>
                       : 'illimitée'}
                   </td>
-                  <td>{euros(s.recette_centimes)}</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td data-l="Recette">{euros(s.recette_centimes)}</td>
+                  <td className="actions">
                     <Link className="btn btn-y btn-sm" href={`/admin/pointage/${s.id}`}>
                       Pointer
                     </Link>{' '}
@@ -103,7 +103,7 @@ export default async function Reservations({
           {evt && <> · <Link href="/admin/reservations" style={{ fontSize: '.8rem' }}>tout voir</Link></>}
         </h2>
 
-        <table className="tbl">
+        <table className="tbl cartes compact">
           <thead>
             <tr>
               <th>Acheteur</th><th>Événement</th><th>Places</th>
