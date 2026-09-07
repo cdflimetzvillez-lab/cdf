@@ -1,10 +1,9 @@
 'use client';
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 function Formulaire() {
-  const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -18,8 +17,9 @@ function Formulaire() {
       email, password: motDePasse,
     });
     if (error) { setErreur('Email ou mot de passe incorrect.'); setCharge(false); return; }
-    router.push(params.get('next') ?? '/admin');
-    router.refresh();
+    // Rechargement complet : le layout admin décide côté serveur de la page d'arrivée selon le rôle.
+    const next = params.get('next') ?? '/admin';
+    window.location.assign(next.startsWith('/admin') ? next : '/admin');
   }
 
   return (
