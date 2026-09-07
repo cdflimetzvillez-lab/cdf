@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/supabase/server';
 import { euros } from '@/lib/sumup';
-import LigneReservation from '@/components/LigneReservation';
+import ListeReservations from '@/components/ListeReservations';
 import ExportCsv from '@/components/ExportCsv';
 import VerifierSumUp from '@/components/VerifierSumUp';
 
@@ -103,20 +103,7 @@ export default async function Reservations({
           {evt && <> · <Link href="/admin/reservations" style={{ fontSize: '.8rem' }}>tout voir</Link></>}
         </h2>
 
-        <table className="tbl cartes compact">
-          <thead>
-            <tr>
-              <th>Acheteur</th><th>Événement</th><th>Places</th>
-              <th>Montant</th><th>Billet</th><th>Statut</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {liste.map((r) => <LigneReservation key={r.id} resa={r as any} />)}
-            {liste.length === 0 && (
-              <tr><td colSpan={7} style={{ color: '#6b6560' }}>Aucune réservation.</td></tr>
-            )}
-          </tbody>
-        </table>
+        <ListeReservations reservations={liste as any[]} />
       </div>
     </>
   );
