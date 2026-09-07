@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const LIENS = [
+const LIENS_ADMIN = [
   { href: '/admin', label: 'Tableau de bord' },
   { href: '/admin/evenements', label: 'Événements' },
   { href: '/admin/reservations', label: 'Réservations' },
@@ -16,10 +16,15 @@ const LIENS = [
   { href: '/admin/maintenance', label: 'Maintenance' },
 ];
 
-export default function NavAdmin() {
+const LIENS_TRESORIER = [
+  { href: '/admin/tresorerie', label: 'Trésorerie (lecture seule)' },
+];
+
+export default function NavAdmin({ role = 'admin' }: { role?: 'admin' | 'tresorier' }) {
   const path = usePathname();
   const [ouvert, setOuvert] = useState(false);
   useEffect(() => { setOuvert(false); }, [path]);
+  const LIENS = role === 'tresorier' ? LIENS_TRESORIER : LIENS_ADMIN;
   const estActif = (href: string) => (href === '/admin' ? path === '/admin' : path.startsWith(href));
   const courant = LIENS.find((l) => estActif(l.href))?.label ?? 'Menu';
 

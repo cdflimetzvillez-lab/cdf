@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
+export type RoleAdmin = 'admin' | 'tresorier';
+
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -25,11 +27,16 @@ export async function createClient() {
   );
 }
 
-/** Vérifie que l'utilisateur courant est bien admin. */
+/**
+ * Vérifie l'utilisateur courant.
+ * - isAdmin : rôle 'admin' uniquement (droits d'écriture)
+ * - isStaff : admin ou trésorier (lecture)
+ */
 export async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, isAdmin: false };
-  const { data } = await supabase.from('admins').select('id').eq('id', user.id).maybeSingle();
-  return { supabase, user, isAdmin: !!data };
+  if (!user) return { supabase, user: null, isAdmin: false, isStaff: false, role: null as RoleAdmin | null };
+  const { data } = await supabase.from('admins').select('id, role').eq('id', user.id).maybeSingle();
+  const role = (data?.role as RoleAdmin | undefined) ?? (data ? 'admin' : null);
+  return { supabase, user, isAdmin: role === 'admin', isStaff: !!role, role };
 }

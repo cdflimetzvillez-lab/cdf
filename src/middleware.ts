@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 export async function middleware(request: NextRequest) {
+  // Le layout admin lit ce header pour connaître la page demandée (rôle trésorier).
+  request.headers.set('x-pathname', request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
