@@ -7,6 +7,7 @@ const LIENS_ADMIN = [
   { href: '/admin', label: 'Tableau de bord' },
   { href: '/admin/evenements', label: 'Événements' },
   { href: '/admin/reservations', label: 'Réservations' },
+  { href: '/admin/tresorerie', label: 'Trésorerie' },
   { href: '/admin/demandes', label: 'Demandes reçues' },
   { href: '/admin/tresors', label: 'Trésors de Noël' },
   { href: '/admin/roue', label: '🎡 Roue de la Rentrée' },
