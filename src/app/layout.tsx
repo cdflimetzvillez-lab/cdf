@@ -1,49 +1,45 @@
-import Link from 'next/link';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { requireAdmin } from '@/lib/supabase/server';
-import NavAdmin from '@/components/NavAdmin';
-import Deconnexion from '@/components/Deconnexion';
+import type { Metadata } from 'next';
+import './globals.css';
 
-export const dynamic = 'force-dynamic';
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cdf-limetzvillez.fr'),
+  title: 'Comité des Fêtes de Limetz-Villez',
+  description:
+    "Brocante, fête de la musique, fête des battages, marché de Noël : les rendez-vous du village de Limetz-Villez, toute l'année.",
+  openGraph: {
+    title: 'Comité des Fêtes de Limetz-Villez',
+    description: 'Brocante, fête de la bière, marché de Noël : les rendez-vous du village, toute l\'année.',
+    url: '/',
+    siteName: 'Comité des Fêtes de Limetz-Villez',
+    type: 'website',
+    locale: 'fr_FR',
+    images: [{
+      url: '/og-image.png',
+      width: 1200,
+      height: 630,
+      alt: 'Comité des Fêtes de Limetz-Villez',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Comité des Fêtes de Limetz-Villez',
+    description: 'Les rendez-vous du village, toute l\'année.',
+    images: ['/og-image.png'],
+  },
+};
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, isStaff, role } = await requireAdmin();
-
-  // La page de login a son propre rendu : elle est exclue via son layout imbriqué.
-  if (!user) redirect('/admin/login');
-  if (!isStaff) {
-    return (
-      <div className="adm-main">
-        <div className="panel">
-          <h2>Compte non autorisé</h2>
-          <p style={{ marginBottom: '1rem' }}>
-            Votre compte ({user.email}) n&apos;est pas déclaré comme administrateur.
-            Ajoutez-le dans la table <code>admins</code> de Supabase.
-          </p>
-          <Deconnexion />
-        </div>
-      </div>
-    );
-  }
-
-  // Un trésorier ne voit que l'espace trésorerie (lecture seule).
-  if (!isAdmin) {
-    const path = (await headers()).get('x-pathname') ?? '';
-    if (path && !path.startsWith('/admin/tresorerie')) redirect('/admin/tresorerie');
-  }
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="adm">
-      <aside className="adm-side">
-        <div className="brand">Comité des Fêtes<br />{isAdmin ? 'Back-office' : 'Trésorerie'}</div>
-        <NavAdmin role={role ?? 'admin'} />
-        <div className="sep">
-          <Link href="/" target="_blank" style={{ fontSize: '.8rem' }}>↗ Voir le site</Link>
-          <Deconnexion />
-        </div>
-      </aside>
-      <main className="adm-main">{children}</main>
-    </div>
+    <html lang="fr">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
   );
 }
