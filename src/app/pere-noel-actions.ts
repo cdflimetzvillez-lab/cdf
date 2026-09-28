@@ -139,6 +139,7 @@ export async function majReglagesPn(_prev: Etat, fd: FormData): Promise<Etat> {
     generation_auto: fd.get('generation_auto') === 'on',
     relecture_script: fd.get('relecture_script') === 'on',
     image_url: String(fd.get('image_url') ?? '').trim() || null,
+    video_demo_url: String(fd.get('video_demo_url') ?? '').trim() || null,
     voice_id: String(fd.get('voice_id') ?? '').trim() || null,
     modele_voix: String(fd.get('modele_voix') ?? '').trim() || 'eleven_multilingual_v2',
     stabilite: num('stabilite', 0.45), similarite: num('similarite', 0.75), style_voix: num('style_voix', 0.3), vitesse: num('vitesse', 0.92),

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { lireReglagesPn } from '@/lib/pere-noel/db';
 import { requireAdmin } from '@/lib/supabase/server';
+import Ciel from '@/components/pere-noel/Ciel';
 import './pere-noel.css';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export default async function PereNoelLayout({ children }: { children: React.Rea
     if (!isAdmin) {
       return (
         <div className="pn">
+          <Ciel />
           <main className="pn-page pn-centre" style={{ paddingTop: '20vh' }}>
             <h1 className="pn-titre">{r.titre}</h1>
             <p className="pn-l clair">Ce service n&apos;est pas disponible pour le moment. Revenez bientôt !</p>
@@ -29,8 +31,9 @@ export default async function PereNoelLayout({ children }: { children: React.Rea
   }
   return (
     <div className="pn">
+      <Ciel />
       <div className="pn-head">
-        <Link href="/pere-noel" className="logo">{r.titre}</Link>
+        <Link href="/pere-noel" className="logo">✦ {r.titre}</Link>
         <Link href="/" className="cdf">Une action du Comité des Fêtes</Link>
       </div>
       {children}

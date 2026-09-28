@@ -14,6 +14,7 @@ export interface ReglagesPn {
   generation_auto: boolean;
   relecture_script: boolean;
   image_url: string | null;
+  video_demo_url: string | null;
   voice_id: string | null;
   modele_voix: string;
   stabilite: number;

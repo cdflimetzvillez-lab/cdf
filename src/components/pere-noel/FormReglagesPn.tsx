@@ -44,6 +44,9 @@ export default function FormReglagesPn({ r, cles }: { r: ReglagesPn; cles: Cles 
       <div className="panel">
         <h2>Le Père Noël (image)</h2>
         <ChampImage name="image_url" label="Portrait du Père Noël, format vertical 9:16, bouche bien visible" valeurInitiale={r.image_url} dossier="pere-noel" aide="C’est cette image qui est animée par HeyGen pour chaque vidéo." />
+        <div className="field"><label htmlFor="video_demo_url">Vidéo de démonstration (URL du MP4, affichée sur la page d’accueil)</label>
+          <input id="video_demo_url" name="video_demo_url" defaultValue={r.video_demo_url ?? ''} placeholder="https://…vercel-storage.com/pere-noel/demo.mp4" />
+          <p style={{ color: '#6b6560', fontSize: '.8rem', marginTop: '.3rem' }}>Déposez le MP4 dans Vercel → Storage → cdf-blob → Manage Blobs → Upload, puis collez ici l’URL du fichier. L’image ci-dessus sert d’affiche avant lecture.</p></div>
         <div className="field"><label htmlFor="expressivite">Expressivité HeyGen</label>
           <select id="expressivite" name="expressivite" defaultValue={r.expressivite}><option value="low">Faible (sobre)</option><option value="medium">Moyenne (conseillé)</option><option value="high">Forte (rires, gestes, risque d’artefacts)</option></select></div>
         <div className="field"><label htmlFor="motion_prompt">Consigne de mouvement (HeyGen)</label><textarea id="motion_prompt" name="motion_prompt" rows={2} defaultValue={r.motion_prompt} /></div>

@@ -16,6 +16,7 @@ create table if not exists pn_reglages (
   generation_auto    boolean not null default false,   -- lancer la génération dès le paiement
   relecture_script   boolean not null default true,    -- l'admin relit le script avant l'audio/vidéo
   image_url          text,                              -- image du Père Noël (portrait 9:16)
+  video_demo_url     text,                              -- vidéo de démonstration (page d'accueil)
   voice_id           text,                              -- voix ElevenLabs
   modele_voix        text not null default 'eleven_multilingual_v2',
   stabilite          numeric not null default 0.45,
