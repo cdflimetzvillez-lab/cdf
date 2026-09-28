@@ -18,6 +18,7 @@ export default async function PageRetour({ searchParams }: { searchParams: Promi
         <h1 className="pn-titre">La lettre de {cmd.enfant_prenom} est partie pour le Pôle Nord</h1>
         <p className="pn-l clair">Le Père Noël enregistre sa réponse. Vous recevrez un email dès que la vidéo est prête.</p>
         <div className="pn-cardn" style={{ textAlign: 'left' }}><b>Votre espace personnel</b><small>Vidéo, téléchargement, lettre écrite et certificat vous y attendent. Le lien vous a aussi été envoyé par email.</small></div>
+        {cmd.envoi_postal && <div className="pn-cardn" style={{ textAlign: 'left' }}><b>📮 Courrier du Pôle Nord</b><small>La lettre et le certificat imprimés seront postés par nos soins à {cmd.adresse_nom}, {cmd.adresse_cp} {cmd.adresse_ville}.</small></div>}
         <Link href={`/pere-noel/ma-video/${cmd.token}`} className="pn-btn or">Ouvrir mon espace</Link>
         <p className="pn-mini pn-muted" style={{ marginTop: 14 }}>{cmd.test ? 'Commande de test' : euros(cmd.montant_centimes)} · réf. {cmd.reference}</p>
         <div className="pn-avis" style={{ textAlign: 'left' }}><b>Un conseil :</b> ne montrez pas la vidéo à {cmd.enfant_prenom} tout de suite. Le soir, dans le noir, sur la télé, l&apos;effet est décuplé.</div>

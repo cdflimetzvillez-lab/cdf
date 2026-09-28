@@ -29,6 +29,10 @@ export default function FormReglagesPn({ r, cles }: { r: ReglagesPn; cles: Cles 
           <div className="field"><label htmlFor="delai_texte">Délai annoncé</label><input id="delai_texte" name="delai_texte" defaultValue={r.delai_texte} /></div>
         </div>
         <label className="field" style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}><input type="checkbox" name="commandes_ouvertes" defaultChecked={r.commandes_ouvertes} style={{ width: 'auto' }} /> Commandes ouvertes au public</label>
+        <div className="row2">
+          <label className="field" style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}><input type="checkbox" name="envoi_postal_actif" defaultChecked={r.envoi_postal_actif} style={{ width: 'auto' }} /> Proposer l’impression et l’envoi postal</label>
+          <div className="field"><label htmlFor="prix_postal">Supplément envoi postal (€)</label><input id="prix_postal" name="prix_postal" type="number" step="0.1" min={0} defaultValue={r.prix_postal_centimes / 100} /></div>
+        </div>
       </div>
 
       <div className="panel">

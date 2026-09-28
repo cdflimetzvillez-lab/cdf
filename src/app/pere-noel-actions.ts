@@ -36,9 +36,18 @@ export async function commander(_prev: Etat, fd: FormData): Promise<Etat> {
   const lettre = txt(fd, 'lettre', 1500);
   if (!lettre && !txt(fd, 'cadeaux', 300)) return { erreur: 'Écrivez au moins la lettre de l’enfant ou ce qu’il demande.' };
 
+  const envoiPostal = r.envoi_postal_actif && fd.get('envoi_postal') === 'on';
+  const adresse = {
+    adresse_nom: txt(fd, 'adresse_nom', 80), adresse_ligne1: txt(fd, 'adresse_ligne1', 120), adresse_ligne2: txt(fd, 'adresse_ligne2', 120),
+    adresse_cp: txt(fd, 'adresse_cp', 10), adresse_ville: txt(fd, 'adresse_ville', 80),
+  };
+  if (envoiPostal && (!adresse.adresse_nom || !adresse.adresse_ligne1 || !adresse.adresse_cp || !adresse.adresse_ville)) {
+    return { erreur: 'Adresse postale incomplète (nom, adresse, code postal et ville).' };
+  }
+
   const db = createAdminClient();
   const reference = referencePn();
-  const montant = modeTest ? 0 : r.prix_centimes;
+  const montant = modeTest ? 0 : r.prix_centimes + (envoiPostal ? r.prix_postal_centimes : 0);
   const { data: cmd, error } = await db.from('pn_commandes').insert({
     reference, test: modeTest,
     parent_prenom: txt(fd, 'parent_prenom', 60) ?? '', email,
@@ -46,6 +55,7 @@ export async function commander(_prev: Etat, fd: FormData): Promise<Etat> {
     age: Number.isFinite(age) && age > 0 && age < 18 ? age : null, genre, sagesse,
     lettre, cadeaux: txt(fd, 'cadeaux', 300), fierte: txt(fd, 'fierte', 300), passion: txt(fd, 'passion', 300),
     effort: txt(fd, 'effort', 200), salut: txt(fd, 'salut', 120), secret: txt(fd, 'secret', 500), ton_secret: ton,
+    envoi_postal: envoiPostal, ...(envoiPostal ? adresse : {}),
     montant_centimes: montant,
     statut: montant === 0 ? 'payee' : 'en_attente', paye_le: montant === 0 ? new Date().toISOString() : null,
   }).select('*').single();
@@ -61,7 +71,7 @@ export async function commander(_prev: Etat, fd: FormData): Promise<Etat> {
   try {
     const checkout = await creerCheckout({
       reference, montantCentimes: montant,
-      description: `${reference} · Vidéo du Père Noël pour ${enfant}`,
+      description: `${reference} · Vidéo du Père Noël pour ${enfant}${envoiPostal ? ' + envoi postal' : ''}`,
       emailClient: email, urlRetour: `${base}/pere-noel/commander/retour?ref=${reference}`,
     });
     await db.from('pn_commandes').update({ checkout_id: checkout.id }).eq('id', cmd.id);
@@ -140,6 +150,8 @@ export async function majReglagesPn(_prev: Etat, fd: FormData): Promise<Etat> {
     relecture_script: fd.get('relecture_script') === 'on',
     image_url: String(fd.get('image_url') ?? '').trim() || null,
     video_demo_url: String(fd.get('video_demo_url') ?? '').trim() || null,
+    envoi_postal_actif: fd.get('envoi_postal_actif') === 'on',
+    prix_postal_centimes: Math.round(num('prix_postal', 4.9) * 100),
     voice_id: String(fd.get('voice_id') ?? '').trim() || null,
     modele_voix: String(fd.get('modele_voix') ?? '').trim() || 'eleven_multilingual_v2',
     stabilite: num('stabilite', 0.45), similarite: num('similarite', 0.75), style_voix: num('style_voix', 0.3), vitesse: num('vitesse', 0.92),
@@ -218,6 +230,12 @@ export async function marquerPayee(id: string) {
   await majCommande(id, { statut: 'payee', paye_le: new Date().toISOString() });
   const r = await lireReglagesPn();
   await emailConfirmation({ ...c, statut: 'payee' }, r);
+  chemins();
+}
+
+export async function marquerExpedie(id: string, expedie: boolean) {
+  await admin();
+  await majCommande(id, { expedie_le: expedie ? new Date().toISOString() : null });
   chemins();
 }
 

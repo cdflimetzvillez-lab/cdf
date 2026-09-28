@@ -51,6 +51,7 @@ export default async function AdminPereNoel() {
         <div><b>{s.en_erreur}</b><span>En erreur</span></div>
         <div><b>{credits ?? '—'}</b><span>Crédits HeyGen restants</span></div>
         <div><b>{coutUsd} $</b><span>Coût vidéo estimé</span></div>
+        <div><b>{commandes.filter((c) => c.statut === 'payee' && c.envoi_postal && !c.expedie_le).length}</b><span>Courriers à poster</span></div>
       </div>
 
       <div className="panel">
@@ -73,7 +74,7 @@ export default async function AdminPereNoel() {
               <tbody>
                 {commandes.map((c) => (
                   <tr key={c.id}>
-                    <td><code>{c.reference}</code>{c.test && <span className="pill new" style={{ marginLeft: 6 }}>test</span>}</td>
+                    <td><code>{c.reference}</code>{c.test && <span className="pill new" style={{ marginLeft: 6 }}>test</span>}{c.envoi_postal && <span className={`pill ${c.expedie_le ? 'done' : 'new'}`} style={{ marginLeft: 6 }} title={c.expedie_le ? 'Courrier expédié' : 'Courrier à expédier'}>📮</span>}</td>
                     <td><b>{c.enfant_prenom}</b>{c.age ? `, ${c.age} ans` : ''}</td>
                     <td>{c.parent_prenom}<br /><small style={{ color: '#6b6560' }}>{c.email}</small></td>
                     <td><span className={`pill ${c.statut === 'payee' ? 'done' : c.statut === 'en_attente' ? 'new' : 'off'}`}>{c.statut === 'payee' ? (c.test ? 'test' : euros(c.montant_centimes)) : c.statut}</span></td>

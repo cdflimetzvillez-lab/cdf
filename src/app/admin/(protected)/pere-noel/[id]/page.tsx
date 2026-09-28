@@ -7,6 +7,7 @@ import { verifierVideo } from '@/lib/pere-noel/pipeline';
 import { COUT_HEYGEN_USD_PAR_SEC, LIBELLE_GEN, LIBELLE_SAGESSE } from '@/lib/pere-noel/types';
 import ActionsCommande from '@/components/pere-noel/ActionsCommande';
 import FormScript from '@/components/pere-noel/FormScript';
+import BlocPostal from '@/components/pere-noel/BlocPostal';
 
 export const maxDuration = 60;
 
@@ -70,6 +71,8 @@ export default async function AdminCommandePn({ params }: { params: Promise<{ id
           ) : <p style={{ color: '#6b6560' }}>Rien de généré pour l’instant.</p>}
         </div>
       </div>
+
+      {c.envoi_postal && <BlocPostal c={c} />}
 
       {c.script ? <FormScript c={c} modifiable={modifiable} /> : (
         <div className="panel"><h2>Script du Père Noël</h2><p style={{ color: '#6b6560' }}>Pas encore écrit. Cliquez sur « Générer » : Claude rédige le script à partir des réponses des parents{' '}

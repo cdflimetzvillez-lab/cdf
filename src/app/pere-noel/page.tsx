@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { lireReglagesPn } from '@/lib/pere-noel/db';
 import { euros } from '@/lib/sumup';
 import DemoVideo from '@/components/pere-noel/DemoVideo';
+import { DocCertificat, DocLettre, EXEMPLE_LETTRE, EXEMPLE_MENTION } from '@/components/pere-noel/Documents';
 
 export default async function PageAccueilPn() {
   const r = await lireReglagesPn();
@@ -36,6 +37,13 @@ export default async function PageAccueilPn() {
         <li className="ok"><span>2</span><div>Le Père Noël lui répond en vidéo, avec ses mots à lui, en prononçant son prénom.</div></li>
         <li className="ok"><span>3</span><div>Vous téléchargez la vidéo, imprimez la lettre et le certificat. Magie garantie le soir de Noël.</div></li>
       </ul>
+
+      <div className="pn-ornement" style={{ marginTop: 26 }}>Inclus avec la vidéo</div>
+      <p className="pn-l clair pn-centre">La lettre écrite du Père Noël et le certificat d&apos;enfant sage, à imprimer chez vous{r.envoi_postal_actif ? ` ou à recevoir par la poste (+ ${euros(r.prix_postal_centimes)})` : ''}.</p>
+      <div className="pn-exemples">
+        <DocLettre prenom="Léa" texte={EXEMPLE_LETTRE} date={new Date()} exemple />
+        <DocCertificat prenom="Léa" mention={EXEMPLE_MENTION} genre="fille" date={new Date()} exemple />
+      </div>
 
       <div className="pn-avis"><b>Un conseil :</b> ne montrez pas la vidéo tout de suite. Le soir, dans le noir, sur la télé du salon, l&apos;effet est décuplé.</div>
 

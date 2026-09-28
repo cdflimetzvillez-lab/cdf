@@ -121,6 +121,15 @@
 .pn-erreur{background:#FBE9E5;color:var(--pn-rouge2);border-radius:10px;padding:10px 12px;font-size:14px;margin:10px 0}
 .pn-ok{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#5CA97D,var(--pn-vert));color:#fff;font-size:36px;display:flex;align-items:center;justify-content:center;margin:20px auto 12px;box-shadow:0 0 0 6px rgba(231,196,106,.25),0 10px 30px rgba(0,0,0,.4)}
 
+/* ---------- option postale ---------- */
+.pn-option{margin-top:16px;border:1.5px solid rgba(201,154,59,.6);border-radius:14px;background:linear-gradient(180deg,#FFF9E8,#FFF3D4);overflow:hidden}
+.pn-option-tete{display:flex;gap:12px;align-items:flex-start;padding:14px;cursor:pointer}
+.pn-option-tete input{width:22px;height:22px;margin-top:2px;accent-color:var(--pn-rouge);flex:none}
+.pn-option-tete b{font-family:var(--pn-serif);font-size:18px;font-weight:600;color:var(--pn-nuit)}
+.pn-option-tete em{font-style:normal;color:var(--pn-rouge);font-weight:600;margin-left:4px}
+.pn-option-tete small{display:block;color:var(--pn-encre2);font-size:12.5px;margin-top:3px;line-height:1.45}
+.pn-option-corps{padding:0 14px 14px;border-top:1px dashed rgba(201,154,59,.5);animation:pn-glisse .3s ease}
+
 /* ---------- étapes / listes ---------- */
 .pn-etapes{list-style:none;padding:0;margin:0}
 .pn-etapes li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(231,196,106,.18);font-size:14.5px;color:#DCE3F5}
@@ -150,49 +159,70 @@
 .pn-demo .sous{font-size:12px;color:#C9D3EC;text-align:center}
 
 /* =========================================================
-   DOCUMENTS IMPRIMABLES (lettre, certificat)
+   DOCUMENTS IMPRIMABLES (lettre A4 portrait, certificat A4 paysage)
+   Tailles en cqw = proportionnelles à la largeur de la feuille :
+   même rendu à l'écran (petit) et sur papier (A4).
    ========================================================= */
 .pn-doc{min-height:100vh;padding:24px 14px 40px;font-family:var(--pn-serif);color:var(--pn-encre);position:relative;z-index:1}
-.pn-doc-feuille{max-width:640px;margin:0 auto;position:relative;padding:14px;
+.pn-doc-feuille{margin:0 auto;position:relative;padding:12px;container-type:inline-size;
   background:linear-gradient(180deg,#0E1C42,#142451);border-radius:6px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
-.pn-doc-cadre{position:relative;border:2px solid var(--pn-or);outline:1px solid rgba(231,196,106,.5);outline-offset:4px;padding:38px 30px 30px;
+.pn-a4-portrait{max-width:640px;aspect-ratio:210/297}
+.pn-a4-paysage{max-width:980px;aspect-ratio:297/210}
+.pn-doc-cadre{position:relative;height:100%;border:2px solid var(--pn-or);outline:1px solid rgba(231,196,106,.5);outline-offset:4px;
+  display:flex;flex-direction:column;
   background:
     radial-gradient(circle at 12% 8%,rgba(231,196,106,.14),transparent 30%),
     radial-gradient(circle at 88% 92%,rgba(231,196,106,.14),transparent 30%),
     repeating-linear-gradient(0deg,rgba(0,0,0,.015) 0 2px,transparent 2px 4px),
     linear-gradient(180deg,#FFFBEF 0%,#FBF3DD 100%)}
-.pn-doc-coin{position:absolute;width:44px;height:44px;color:var(--pn-or2)}
-.pn-doc-coin.hg{top:8px;left:8px}.pn-doc-coin.hd{top:8px;right:8px;transform:scaleX(-1)}
-.pn-doc-coin.bg{bottom:8px;left:8px;transform:scaleY(-1)}.pn-doc-coin.bd{bottom:8px;right:8px;transform:scale(-1)}
-.pn-doc-sur{font-family:var(--pn-sans);font-size:11px;color:var(--pn-encre2);text-align:center;letter-spacing:.24em;text-transform:uppercase}
-.pn-doc h1{font-size:40px;text-align:center;margin:10px 0 2px;font-weight:600;color:var(--pn-nuit);line-height:1.05}
-.pn-doc .filet{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--pn-or2);margin:8px 0 14px;font-size:14px}
-.pn-doc .filet:before,.pn-doc .filet:after{content:"";height:1px;width:70px;background:linear-gradient(90deg,transparent,var(--pn-or2))}
+.pn-a4-portrait .pn-doc-cadre{padding:7cqw 7cqw 6cqw}
+.pn-a4-paysage .pn-doc-cadre{padding:3.2cqw 7cqw 2.6cqw;text-align:center;overflow:hidden}
+.pn-doc-coin{position:absolute;width:7cqw;height:7cqw;color:var(--pn-or2)}
+.pn-doc-coin.hg{top:1.2cqw;left:1.2cqw}.pn-doc-coin.hd{top:1.2cqw;right:1.2cqw;transform:scaleX(-1)}
+.pn-doc-coin.bg{bottom:1.2cqw;left:1.2cqw;transform:scaleY(-1)}.pn-doc-coin.bd{bottom:1.2cqw;right:1.2cqw;transform:scale(-1)}
+.pn-doc-sur{font-family:var(--pn-sans);font-size:1.8cqw;color:var(--pn-encre2);text-align:center;letter-spacing:.24em;text-transform:uppercase}
+.pn-doc .filet{display:flex;align-items:center;justify-content:center;gap:1.5cqw;color:var(--pn-or2);margin:.8cqw 0 1.4cqw;font-size:2cqw}
+.pn-doc .filet:before,.pn-doc .filet:after{content:"";height:1px;width:12cqw;background:linear-gradient(90deg,transparent,var(--pn-or2))}
 .pn-doc .filet:after{background:linear-gradient(90deg,var(--pn-or2),transparent)}
-.pn-doc .prenom{font-family:'Great Vibes',var(--pn-serif);font-size:64px;color:var(--pn-rouge);text-align:center;margin:2px 0 6px;line-height:1.1;text-shadow:0 2px 0 rgba(231,196,106,.35)}
-.pn-doc p{font-size:19px;line-height:1.55;margin:0 0 12px}
-.pn-doc .mention{font-style:italic;text-align:center;font-size:21px;color:var(--pn-nuit);max-width:44ch;margin:0 auto 14px}
-.pn-doc .lettre{white-space:pre-line;font-size:20px;line-height:1.6;margin-top:10px}
-.pn-doc .signature{font-family:'Great Vibes',var(--pn-serif);font-size:40px;color:var(--pn-rouge);text-align:right;margin-top:6px;line-height:1}
-.pn-doc .bas{display:flex;justify-content:space-between;align-items:flex-end;margin-top:22px;gap:12px}
-.pn-doc .date{font-size:15px;color:var(--pn-encre2);line-height:1.4}
-.pn-doc .sceau{position:relative;width:96px;height:96px;flex:none;border-radius:50%;transform:rotate(-8deg);
-  background:radial-gradient(circle at 35% 30%,#D64B47,var(--pn-rouge) 55%,var(--pn-rouge2));box-shadow:inset 0 0 0 3px rgba(255,255,255,.25),inset 0 0 0 6px var(--pn-rouge2),0 6px 16px rgba(0,0,0,.25);
-  color:#FFF3CF;font-family:var(--pn-serif);font-size:10px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;letter-spacing:.06em;text-transform:uppercase}
-.pn-doc .sceau b{font-size:22px;line-height:1;margin:2px 0;font-family:var(--pn-serif)}
+.pn-doc .date{font-size:2.4cqw;color:var(--pn-encre2);line-height:1.4}
+.pn-doc .signature{font-family:'Great Vibes',var(--pn-serif);font-size:6cqw;color:var(--pn-rouge);text-align:right;line-height:1;margin-top:.5cqw}
+.pn-doc .bas{display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:2cqw;gap:2cqw}
+.pn-doc .sceau{position:relative;width:15cqw;height:15cqw;flex:none;border-radius:50%;transform:rotate(-8deg);
+  background:radial-gradient(circle at 35% 30%,#D64B47,var(--pn-rouge) 55%,var(--pn-rouge2));box-shadow:inset 0 0 0 .4cqw rgba(255,255,255,.25),inset 0 0 0 .9cqw var(--pn-rouge2),0 6px 16px rgba(0,0,0,.25);
+  color:#FFF3CF;font-family:var(--pn-serif);font-size:1.5cqw;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;letter-spacing:.06em;text-transform:uppercase}
+.pn-doc .sceau b{font-size:3.4cqw;line-height:1;margin:.3cqw 0}
 .pn-doc .etoiles-doc{position:absolute;inset:0;pointer-events:none;opacity:.55;
   background-image:radial-gradient(1.5px 1.5px at 20% 18%,var(--pn-or2) 60%,transparent 61%),radial-gradient(1px 1px at 80% 12%,var(--pn-or2) 60%,transparent 61%),
     radial-gradient(1.5px 1.5px at 90% 40%,var(--pn-or2) 60%,transparent 61%),radial-gradient(1px 1px at 10% 60%,var(--pn-or2) 60%,transparent 61%),
     radial-gradient(1.5px 1.5px at 30% 88%,var(--pn-or2) 60%,transparent 61%),radial-gradient(1px 1px at 70% 84%,var(--pn-or2) 60%,transparent 61%)}
+.pn-doc-pied{font-family:var(--pn-sans);font-size:1.7cqw;color:var(--pn-encre2);text-align:center;margin-top:2cqw;letter-spacing:.08em}
+/* lettre */
+.pn-doc .lettre{white-space:pre-line;font-size:3.1cqw;line-height:1.55;margin-top:1.5cqw;flex:1}
+/* certificat */
+.pn-cert h1{font-size:5.6cqw;text-align:center;margin:.6cqw 0 0;font-weight:600;color:var(--pn-nuit);line-height:1.05}
+.pn-cert .decerne{font-style:italic;font-size:2.2cqw;margin:0}
+.pn-cert .prenom{font-family:'Great Vibes',var(--pn-serif);font-size:8.5cqw;color:var(--pn-rouge);margin:0 0 .4cqw;line-height:1.1;text-shadow:0 2px 0 rgba(231,196,106,.35)}
+.pn-cert .mention{font-style:italic;font-size:2.5cqw;line-height:1.35;color:var(--pn-nuit);max-width:64cqw;margin:0 auto 1cqw}
+.pn-cert .atteste{font-size:1.9cqw;line-height:1.45;color:var(--pn-encre2);max-width:72cqw;margin:0 auto}
+.pn-cert .bas{text-align:left;padding-top:1cqw}
+.pn-cert .sceau{width:12cqw;height:12cqw;font-size:1.2cqw}.pn-cert .sceau b{font-size:2.8cqw}
+.pn-cert .signature{font-size:4.6cqw}.pn-cert .date{font-size:2cqw}
+/* exemple / filigrane */
+.pn-exemple{pointer-events:none;user-select:none}
+.pn-filigrane{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;
+  font-family:var(--pn-sans);font-weight:700;font-size:14cqw;letter-spacing:.2em;text-transform:uppercase;color:rgba(184,50,46,.16);transform:rotate(-24deg)}
+.pn-exemples{display:grid;gap:14px;margin-top:8px}
+.pn-exemples .pn-doc-feuille{box-shadow:var(--pn-lueur)}
 .pn-doc .actions{max-width:640px;margin:18px auto 0;display:flex;gap:10px;font-family:var(--pn-sans)}
 .pn-doc .actions a,.pn-doc .actions button{flex:1;text-align:center;padding:13px;border-radius:12px;border:1.5px solid var(--pn-or);font-size:15px;cursor:pointer;text-decoration:none;font-family:var(--pn-serif);font-weight:600}
 .pn-doc .actions a{background:transparent;color:var(--pn-or3)}
 .pn-doc .actions button{background:linear-gradient(180deg,#FFF0BF,var(--pn-or) 55%,var(--pn-or2));color:var(--pn-encre);border-color:transparent}
 @media print{
-  .pn{background:#fff!important}
-  .pn-ciel,.pn-head,.pn-foot,.pn-doc .actions{display:none!important}
+  .pn{background:#fff!important;min-height:0}
+  .pn-ciel,.pn-head,.pn-foot,.pn-doc .actions,.pn-doc>p{display:none!important}
   .pn-doc{padding:0;min-height:0}
-  .pn-doc-feuille{background:none;box-shadow:none;padding:0;max-width:none}
+  .pn-doc-feuille{background:none;box-shadow:none;padding:0;border-radius:0;max-width:none;margin:0}
+  .pn-a4-portrait{width:186mm;height:273mm;aspect-ratio:auto}
+  .pn-a4-paysage{width:277mm;height:190mm;aspect-ratio:auto}
   .pn-doc-cadre{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  @page{margin:12mm}
 }

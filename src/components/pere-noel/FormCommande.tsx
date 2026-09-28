@@ -7,7 +7,7 @@ import { LIBELLE_SAGESSE, type Sagesse, type TonSecret } from '@/lib/pere-noel/t
 const EFFORTS = ['Dormir dans son lit', 'Goûter les légumes', 'Ranger sa chambre', 'Être gentil avec son frère ou sa sœur', 'Moins d’écrans', 'Se brosser les dents sans râler'];
 const NOMS_ETAPES = ['L’enfant', 'Sa lettre', 'Les détails', 'Le secret', 'Récapitulatif'];
 
-export default function FormCommande({ prix, test }: { prix: number; test: boolean }) {
+export default function FormCommande({ prix, test, postal }: { prix: number; test: boolean; postal: { actif: boolean; prix: number } }) {
   const [etat, action, pending] = useActionState<Etat, FormData>(commander, null);
   const [etape, setEtape] = useState(1);
   useEffect(() => { if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }, [etape]);
@@ -15,8 +15,11 @@ export default function FormCommande({ prix, test }: { prix: number; test: boole
     enfant_prenom: '', prononciation: '', age: '', genre: '', sagesse: 'tres_sage' as Sagesse,
     lettre: '', cadeaux: '', fierte: '', passion: '', effort: '', effortAutre: '', salut: '',
     secret: '', ton_secret: 'rigolo' as TonSecret, parent_prenom: '', email: '',
+    envoi_postal: false, adresse_nom: '', adresse_ligne1: '', adresse_ligne2: '', adresse_cp: '', adresse_ville: '',
   });
-  const maj = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+  const maj = (k: keyof typeof f, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
+  const adresseOk = !f.envoi_postal || (f.adresse_nom.trim() && f.adresse_ligne1.trim() && f.adresse_cp.trim() && f.adresse_ville.trim());
+  const total = prix + (f.envoi_postal ? postal.prix : 0);
   const enfantOk = f.enfant_prenom.trim().length > 0 && Number(f.age) > 0;
   const lettreOk = f.lettre.trim().length > 0 || f.cadeaux.trim().length > 0;
   const parentOk = f.parent_prenom.trim().length > 0 && f.email.includes('@');
@@ -124,13 +127,33 @@ export default function FormCommande({ prix, test }: { prix: number; test: boole
           <input id="parent_prenom" name="parent_prenom" autoComplete="given-name" value={f.parent_prenom} onChange={(e) => maj('parent_prenom', e.target.value)} /></div>
         <div className="pn-champ"><label htmlFor="email">Votre email (pour recevoir la vidéo)</label>
           <input id="email" name="email" type="email" inputMode="email" autoComplete="email" value={f.email} onChange={(e) => maj('email', e.target.value)} /></div>
+        {postal.actif && (
+          <div className="pn-option">
+            <label className="pn-option-tete">
+              <input type="checkbox" name="envoi_postal" checked={f.envoi_postal} onChange={(e) => maj('envoi_postal', e.target.checked)} />
+              <span><b>Impression et envoi postal par nos soins</b> <em>+ {euros(postal.prix)}</em><small>La lettre et le certificat imprimés sur beau papier, glissés dans une enveloppe au nom de votre enfant, postés par le Comité des Fêtes. L&apos;effet « courrier du Pôle Nord » dans la boîte aux lettres.</small></span>
+            </label>
+            {f.envoi_postal && (
+              <div className="pn-option-corps">
+                <div className="pn-champ"><label htmlFor="adresse_nom">Nom sur l&apos;enveloppe</label><input id="adresse_nom" name="adresse_nom" placeholder={`${f.enfant_prenom || 'Léa'} Dupont`} value={f.adresse_nom} onChange={(e) => maj('adresse_nom', e.target.value)} autoComplete="name" /></div>
+                <div className="pn-champ"><label htmlFor="adresse_ligne1">Adresse</label><input id="adresse_ligne1" name="adresse_ligne1" value={f.adresse_ligne1} onChange={(e) => maj('adresse_ligne1', e.target.value)} autoComplete="address-line1" /></div>
+                <div className="pn-champ"><label htmlFor="adresse_ligne2">Complément (facultatif)</label><input id="adresse_ligne2" name="adresse_ligne2" value={f.adresse_ligne2} onChange={(e) => maj('adresse_ligne2', e.target.value)} autoComplete="address-line2" /></div>
+                <div className="pn-row">
+                  <div className="pn-champ" style={{ flex: '0 0 38%' }}><label htmlFor="adresse_cp">Code postal</label><input id="adresse_cp" name="adresse_cp" inputMode="numeric" value={f.adresse_cp} onChange={(e) => maj('adresse_cp', e.target.value)} autoComplete="postal-code" /></div>
+                  <div className="pn-champ"><label htmlFor="adresse_ville">Ville</label><input id="adresse_ville" name="adresse_ville" value={f.adresse_ville} onChange={(e) => maj('adresse_ville', e.target.value)} autoComplete="address-level2" /></div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ marginTop: 14 }}>
           <div className="pn-prix"><span>Vidéo réponse du Père Noël</span><span>{test ? 'test' : euros(prix)}</span></div>
-          <div className="pn-prix"><span>Lettre écrite + certificat d&apos;enfant sage</span><span>inclus</span></div>
-          <div className="pn-prix total"><span>Total</span><span>{test ? '0 €' : euros(prix)}</span></div>
+          <div className="pn-prix"><span>Lettre écrite + certificat d&apos;enfant sage (à imprimer)</span><span>inclus</span></div>
+          {f.envoi_postal && <div className="pn-prix"><span>Impression et envoi postal</span><span>{test ? 'test' : euros(postal.prix)}</span></div>}
+          <div className="pn-prix total"><span>Total</span><span>{test ? '0 €' : euros(total)}</span></div>
         </div>
-        <button type="submit" className="pn-btn vert" disabled={!parentOk || pending}>
-          {pending ? 'Redirection…' : test ? 'Créer la commande de test' : `Payer ${euros(prix)} par carte`}
+        <button type="submit" className="pn-btn vert" disabled={!parentOk || !adresseOk || pending}>
+          {pending ? 'Redirection…' : test ? 'Créer la commande de test' : `Payer ${euros(total)} par carte`}
         </button>
         <p className="pn-l pn-mini pn-centre" style={{ marginTop: 10 }}>Paiement sécurisé par SumUp. Vidéo livrée par email, garantie satisfait ou refait.</p>
         <button type="button" className="pn-lien" onClick={() => setEtape(1)}>Modifier les réponses</button>

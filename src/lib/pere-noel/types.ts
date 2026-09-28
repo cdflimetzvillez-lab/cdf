@@ -15,6 +15,8 @@ export interface ReglagesPn {
   relecture_script: boolean;
   image_url: string | null;
   video_demo_url: string | null;
+  envoi_postal_actif: boolean;
+  prix_postal_centimes: number;
   voice_id: string | null;
   modele_voix: string;
   stabilite: number;
@@ -48,6 +50,13 @@ export interface CommandePn {
   salut: string | null;
   secret: string | null;
   ton_secret: TonSecret;
+  envoi_postal: boolean;
+  adresse_nom: string | null;
+  adresse_ligne1: string | null;
+  adresse_ligne2: string | null;
+  adresse_cp: string | null;
+  adresse_ville: string | null;
+  expedie_le: string | null;
   montant_centimes: number;
   checkout_id: string | null;
   statut: StatutPaiement;

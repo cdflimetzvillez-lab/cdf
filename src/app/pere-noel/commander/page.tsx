@@ -17,7 +17,7 @@ export default async function PageCommander({ searchParams }: { searchParams: Pr
   }
   return (
     <main className="pn-page">
-      <FormCommande prix={r.prix_centimes} test={test} />
+      <FormCommande prix={r.prix_centimes} test={test} postal={{ actif: r.envoi_postal_actif, prix: r.prix_postal_centimes }} />
     </main>
   );
 }
