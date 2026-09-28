@@ -123,7 +123,7 @@ export async function lancerVideo(params: { imageUrl: string; audioUrl: string; 
       image_url: params.imageUrl,
       audio_url: params.audioUrl,
       title: params.titre,
-      resolution: '1080p',
+      resolution: process.env.HEYGEN_RESOLUTION === '1080p' ? '1080p' : '720p',
       aspect_ratio: '9:16',
       expressiveness: params.expressivite,
       motion_prompt: params.motionPrompt,

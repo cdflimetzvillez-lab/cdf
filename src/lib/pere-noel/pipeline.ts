@@ -1,5 +1,5 @@
 import 'server-only';
-import { commandeParId, deposerMedia, lireReglagesPn, majCommande } from './db';
+import { commandeParId, deposerMedia, deposerVideo, lireReglagesPn, majCommande } from './db';
 import { genererAudio, genererContenu, lancerVideo, statutVideo } from './ia';
 import { emailVideoPrete } from './emails';
 import type { CommandePn } from './types';
@@ -73,7 +73,7 @@ export async function verifierVideo(id: string): Promise<CommandePn> {
     const res = await fetch(s.videoUrl);
     if (!res.ok) throw new Error(`Téléchargement HeyGen ${res.status}`);
     const mp4 = await res.arrayBuffer();
-    const url = await deposerMedia(`videos/${c.reference}.mp4`, mp4, 'video/mp4');
+    const url = await deposerVideo(`videos/${c.reference}.mp4`, mp4);
     await majCommande(c.id, { video_url: url, duree_sec: s.dureeSec, gen_statut: 'terminee', livre_le: new Date().toISOString(), erreur: null });
     c = (await commandeParId(id))!;
 

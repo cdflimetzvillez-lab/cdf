@@ -1,4 +1,5 @@
 import 'server-only';
+import { put } from '@vercel/blob';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { CommandePn, ReglagesPn, StatsPn } from './types';
 
@@ -52,6 +53,20 @@ export async function deposerMedia(chemin: string, contenu: ArrayBuffer | Uint8A
   const { error } = await db.storage.from('medias').upload(nom, contenu, { contentType, upsert: true, cacheControl: '31536000' });
   if (error) throw new Error(`Stockage : ${error.message}`);
   return db.storage.from('medias').getPublicUrl(nom).data.publicUrl;
+}
+
+/**
+ * Vidéos : Vercel Blob (jusqu'à 5 Go par fichier) si BLOB_READ_WRITE_TOKEN est défini,
+ * sinon le bucket Supabase (plafonné à 50 Mo sur le plan gratuit).
+ */
+export async function deposerVideo(chemin: string, contenu: ArrayBuffer): Promise<string> {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const { url } = await put(`pere-noel/${chemin}`, contenu, {
+      access: 'public', contentType: 'video/mp4', addRandomSuffix: false, allowOverwrite: true, multipart: true,
+    });
+    return url;
+  }
+  return deposerMedia(chemin, contenu, 'video/mp4');
 }
 
 export function referencePn() {

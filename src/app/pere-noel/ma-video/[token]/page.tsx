@@ -13,7 +13,9 @@ export default async function PageMaVideo({ params }: { params: Promise<{ token:
 
   const prete = c.gen_statut === 'terminee' && c.video_url;
   const nomFichier = `Pere-Noel-${c.enfant_prenom.replace(/[^a-zA-Z0-9À-ÿ]/g, '')}.mp4`;
-  const urlTelechargement = c.video_url ? `${c.video_url}${c.video_url.includes('?') ? '&' : '?'}download=${encodeURIComponent(nomFichier)}` : '#';
+  const urlTelechargement = !c.video_url ? '#'
+    : c.video_url.includes('vercel-storage.com') ? `${c.video_url}?download=1`
+    : `${c.video_url}${c.video_url.includes('?') ? '&' : '?'}download=${encodeURIComponent(nomFichier)}`;
   const docsPrets = !!c.lettre_reponse;
 
   return (
