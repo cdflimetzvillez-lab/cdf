@@ -1,5 +1,5 @@
 {
   "crons": [
-    { "path": "/api/pere-noel/cron", "schedule": "0 * * * *" }
+    { "path": "/api/pere-noel/cron", "schedule": "0 6 * * *" }
   ]
 }
