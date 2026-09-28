@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { lireCheckout } from '@/lib/sumup';
 import { envoyerBillet } from '@/app/reservation-actions';
 import { synchroniserCommande } from '@/app/tresors-actions';
+import { synchroniserCommandePn } from '@/app/pere-noel-actions';
 
 /**
  * Webhook SumUp.
@@ -52,6 +53,9 @@ export async function POST(request: NextRequest) {
       // Trésors de Noël ? (référence TDN-…)
       const cmd = await synchroniserCommande(undefined, checkoutId);
       if (cmd) return NextResponse.json({ ok: true, module: 'tresors', statut: cmd.statut });
+      // Père Noël ? (référence PN-…)
+      const pn = await synchroniserCommandePn(undefined, checkoutId);
+      if (pn) return NextResponse.json({ ok: true, module: 'pere-noel', statut: pn.statut });
       // Paiement inconnu : on répond 200 pour éviter que SumUp réessaie sans fin.
       console.warn('[webhook] réservation introuvable', checkoutId);
       return NextResponse.json({ ok: true, ignore: true });

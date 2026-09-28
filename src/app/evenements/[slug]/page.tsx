@@ -54,6 +54,8 @@ export default async function PageEvenement(
   const e = evt as Evenement;
   const { data: tdn } = await supabase.from('tdn_reglages').select('module_actif').eq('id', 1).maybeSingle();
   const tdnActif = tdn?.module_actif !== false;
+  const { data: pn } = await supabase.from('pn_reglages').select('module_actif').eq('id', 1).maybeSingle();
+  const pnActif = pn?.module_actif === true;
 
   const [{ data: creneaux }, { data: infos }, { data: faq }, { data: documents }, { data: tarifs },
          { data: autres }, { data: settings }] = await Promise.all([
@@ -88,7 +90,7 @@ export default async function PageEvenement(
 
   return (
     <div style={{ ['--evt' as string]: e.couleur, ['--evt-dark' as string]: e.couleur_sombre }}>
-      <MenuButton tresors={tdnActif} />
+      <MenuButton tresors={tdnActif} pereNoel={pnActif} />
       <Link className="crumb" href="/#evenements">← Tous les événements</Link>
 
       <header

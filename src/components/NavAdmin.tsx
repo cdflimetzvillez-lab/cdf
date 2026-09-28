@@ -10,6 +10,7 @@ const LIENS_ADMIN = [
   { href: '/admin/tresorerie', label: 'Trésorerie' },
   { href: '/admin/demandes', label: 'Demandes reçues' },
   { href: '/admin/tresors', label: 'Trésors de Noël' },
+  { href: '/admin/pere-noel', label: '🎅 Père Noël vidéo' },
   { href: '/admin/roue', label: '🎡 Roue de la Rentrée' },
   { href: '/admin/partenaires', label: 'Partenaires' },
   { href: '/admin/association', label: 'Association' },
