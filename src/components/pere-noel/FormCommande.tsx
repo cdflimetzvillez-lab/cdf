@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { commander, type Etat } from '@/app/pere-noel-actions';
 import { euros } from '@/lib/sumup';
 import { LIBELLE_SAGESSE, type Sagesse, type TonSecret } from '@/lib/pere-noel/types';
@@ -10,6 +10,7 @@ const NOMS_ETAPES = ['L’enfant', 'Sa lettre', 'Les détails', 'Le secret', 'R�
 export default function FormCommande({ prix, test }: { prix: number; test: boolean }) {
   const [etat, action, pending] = useActionState<Etat, FormData>(commander, null);
   const [etape, setEtape] = useState(1);
+  useEffect(() => { if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }, [etape]);
   const [f, setF] = useState({
     enfant_prenom: '', prononciation: '', age: '', genre: '', sagesse: 'tres_sage' as Sagesse,
     lettre: '', cadeaux: '', fierte: '', passion: '', effort: '', effortAutre: '', salut: '',
