@@ -9,7 +9,17 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const r = await lireReglagesPn();
-  return { title: `${r.titre} · Comité des Fêtes`, description: r.accroche };
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.cdf-limetzvillez.fr';
+  const titre = r.titre;
+  const description = `${r.accroche} Une vraie réponse à sa lettre, en vidéo, avec son prénom. Lettre écrite et certificat d'enfant sage inclus. Une action du Comité des Fêtes.`;
+  const images = r.image_url ? [{ url: r.image_url, width: 1080, height: 1920, alt: 'Le Père Noël dans son atelier' }] : [];
+  return {
+    metadataBase: new URL(base),
+    title: `${titre} · Comité des Fêtes`,
+    description,
+    openGraph: { type: 'website', url: `${base}/pere-noel`, siteName: 'Comité des Fêtes de Limetz-Villez', title: titre, description, images, locale: 'fr_FR' },
+    twitter: { card: 'summary_large_image', title: titre, description, images: images.map((i) => i.url) },
+  };
 }
 
 export default async function PereNoelLayout({ children }: { children: React.ReactNode }) {
