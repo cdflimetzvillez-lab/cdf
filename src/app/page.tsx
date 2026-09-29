@@ -32,7 +32,7 @@ export default async function Home() {
 
   return (
     <>
-      <MenuButton tresors={tdn?.module_actif !== false} pereNoel={pn?.module_actif === true} />
+      <MenuButton tresors={tdn?.module_actif === true} pereNoel={pn?.module_actif === true} />
       <RetourHaut />
 
       <header className="hero" style={{ ['--evt' as string]: s.hero_couleur }}>
