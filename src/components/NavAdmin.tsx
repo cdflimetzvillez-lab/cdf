@@ -15,6 +15,7 @@ const LIENS_ADMIN = [
   { href: '/admin/roue', label: '🎡 Roue de la Rentrée' },
   { href: '/admin/partenaires', label: 'Partenaires' },
   { href: '/admin/association', label: 'Association' },
+  { href: '/admin/theme', label: 'Thème de l\u2019accueil' },
   { href: '/admin/parametres', label: 'Réglages du site' },
   { href: '/admin/maintenance', label: 'Maintenance' },
 ];

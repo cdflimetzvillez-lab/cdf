@@ -7,6 +7,9 @@ import Footer from '@/components/Footer';
 import RoueRentree from '@/components/roue/RoueRentree';
 import BandeauPartenaires from '@/components/BandeauPartenaires';
 import { configRoue, getWheelConfig, roueVisible } from '@/lib/roue/db';
+import { getThemes } from '@/lib/theme/db';
+import { themeDuJour, variablesTheme } from '@/lib/theme/types';
+import { BlocTheme, Neige, PastilleTheme } from '@/components/theme/ThemeAccueil';
 import { dateCourte, dateLongue, horaires, periode, texteSur } from '@/lib/format';
 import type { Partenaire, SiteSettings, Stat, Evenement } from '@/lib/types';
 
@@ -15,7 +18,7 @@ export const revalidate = 60;
 export default async function Home() {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig, { data: partenaires }, { data: tdn }, { data: pn }] = await Promise.all([
+  const [{ data: settings }, { data: stats }, { data: evenements }, wheelConfig, { data: partenaires }, { data: tdn }, { data: pn }, themes] = await Promise.all([
     supabase.from('site_settings').select('*').eq('id', 1).single(),
     supabase.from('stats').select('*').order('position'),
     supabase.from('evenements').select('*').eq('publie', true).order('position'),
@@ -23,6 +26,7 @@ export default async function Home() {
     supabase.from('partenaires').select('*').eq('actif', true).order('position'),
     supabase.from('tdn_reglages').select('module_actif').eq('id', 1).maybeSingle(),
     supabase.from('pn_reglages').select('module_actif').eq('id', 1).maybeSingle(),
+    getThemes(),
   ]);
   // Module événementiel : rendu côté serveur uniquement si actif et dans la période.
   const showWheel = roueVisible(wheelConfig);
@@ -30,12 +34,18 @@ export default async function Home() {
   const s = settings as SiteSettings;
   const evts = (evenements ?? []) as Evenement[];
 
+  // Thème du moment (Octobre Rose, Noël...) : actif et dans sa période, sinon rien ne change.
+  const theme = themeDuJour(themes);
+  const styleTheme = theme ? (variablesTheme(theme) as React.CSSProperties) : undefined;
+  const annonces = evts.map((e) => `${dateCourte(e.date_debut)} · ${e.titre}`);
+
   return (
     <>
       <MenuButton tresors={tdn?.module_actif === true} pereNoel={pn?.module_actif === true} />
       <RetourHaut />
 
-      <header className="hero" style={{ ['--evt' as string]: s.hero_couleur }}>
+      <header className={`hero${theme ? ' th' : ''}`} style={styleTheme ?? { ['--evt' as string]: s.hero_couleur }}>
+        {theme && <Neige theme={theme} />}
         <div className="hero-inner">
           <div className="logo-badge">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -45,8 +55,9 @@ export default async function Home() {
               alt="Comité des Fêtes de Limetz-Villez"
             />
           </div>
+          {theme && <PastilleTheme theme={theme} />}
           <div style={{ marginBottom: '2.4rem' }}>
-            <span className="kicker mono">{s.hero_kicker}</span>
+            <span className="kicker mono">{theme?.etiquette || s.hero_kicker}</span>
           </div>
           <h1>
             {s.hero_titre_1} <span className="jaune">{s.hero_titre_accent}</span>
@@ -69,7 +80,16 @@ export default async function Home() {
         </a>
       </header>
 
-      <Marquee items={evts.map((e) => `${dateCourte(e.date_debut)} · ${e.titre}`)} />
+      {theme ? (
+        <>
+          <div className="th-bandeau" style={styleTheme}>
+            <Marquee items={theme.bandeau ? [theme.bandeau, ...annonces] : annonces} />
+          </div>
+          <BlocTheme theme={theme} style={styleTheme} />
+        </>
+      ) : (
+        <Marquee items={annonces} />
+      )}
 
       {showWheel && <RoueRentree config={configRoue(wheelConfig)} />}
 

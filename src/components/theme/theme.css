@@ -1,0 +1,61 @@
+/* Habillage de la page d'accueil par un thème (Octobre Rose, Noël...). */
+
+/* ---------- Haut de page ---------- */
+.hero.th::before{background:repeating-conic-gradient(from 0deg at 50% 42%,
+  var(--th-rayon) 0deg 7deg, transparent 7deg 14deg);}
+.hero.th h1 .jaune{color:var(--th-a1);}
+.hero.th h1 .cyan{color:var(--th-a2);}
+.hero.th .hero-tag,.hero.th .scroll-hint{color:var(--th-texte);}
+.hero.th .kicker{color:var(--th-clair);}
+
+.th-pastille{position:absolute;top:0;right:0;z-index:4;display:flex;align-items:center;gap:.6rem;
+  background:var(--creme);color:var(--noir);border:3px solid var(--noir);box-shadow:5px 5px 0 var(--noir);
+  padding:.55rem .9rem;transform:rotate(4deg);text-align:left;}
+.th-pastille b{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;
+  font-size:1.15rem;line-height:.95;max-width:9ch;}
+.th-motif{flex:none;width:30px;height:46px;}
+.th-etoile{flex:none;font-size:2.1rem;line-height:1;color:var(--th);}
+
+.th-neige{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.9;
+  background-image:radial-gradient(#fff 2px,transparent 2.5px),radial-gradient(#fff 1.5px,transparent 2px),
+    radial-gradient(#fff 3px,transparent 3.5px);
+  background-size:90px 110px,60px 70px,150px 130px;background-position:10px 20px,40px 60px,70px 10px;}
+
+/* ---------- Bandeau défilant ---------- */
+.th-bandeau .marquee{color:var(--th-clair);border-color:var(--th);}
+.th-bandeau .marquee span::after{color:#fff;}
+
+/* ---------- Bloc de message ---------- */
+.th-bloc{padding:2.6rem 2rem;background:var(--th-pale);border-bottom:3px solid var(--noir);}
+.th-bloc-in{max-width:820px;margin:0 auto;display:flex;gap:1.4rem;align-items:flex-start;}
+.th-bloc .th-motif{width:46px;height:70px;}
+.th-bloc .th-etoile{font-size:3rem;}
+.th-bloc h2{font-size:clamp(1.7rem,4.4vw,2.6rem);line-height:.98;margin-bottom:.7rem;}
+.th-bloc p{font-size:1.02rem;line-height:1.55;max-width:58ch;margin-bottom:1.2rem;}
+.th-bloc p:last-child{margin-bottom:0;}
+
+@media (max-width:760px){
+  /* Sur mobile, la pastille se place sous le logo au lieu du coin. */
+  .th-pastille{position:relative;display:inline-flex;margin:0 auto 1.6rem;}
+  .th-bloc{padding:2rem 1.2rem;}
+  .th-bloc-in{flex-direction:column;gap:.8rem;}
+}
+
+/* ---------- Aperçu dans l'admin ---------- */
+.th-apercu{border:3px solid var(--noir);overflow:hidden;background:var(--creme);}
+.th-apercu-hero{position:relative;background:var(--th);padding:1.6rem 1rem 2rem;text-align:center;overflow:hidden;}
+.th-apercu-hero::before{content:"";position:absolute;inset:-60% -30%;
+  background:repeating-conic-gradient(from 0deg at 50% 42%,var(--th-rayon) 0deg 7deg,transparent 7deg 14deg);}
+.th-apercu-hero > *{position:relative;z-index:3;}
+.th-apercu-hero .th-neige{position:absolute;z-index:2;}
+.th-apercu-hero .th-pastille{position:relative;display:inline-flex;margin-bottom:1rem;}
+.th-apercu-hero .kicker{color:var(--th-clair);font-size:.62rem;}
+.th-apercu-hero h3{font-size:clamp(1.8rem,6vw,3rem);line-height:.88;color:var(--creme);
+  text-shadow:4px 4px 0 var(--noir);margin-top:1rem;}
+.th-apercu-hero h3 .a1{color:var(--th-a1);}
+.th-apercu-hero h3 .a2{color:var(--th-a2);}
+.th-apercu .marquee div{animation:none;font-size:.9rem;padding:.5rem 0;}
+.th-apercu .th-bloc{padding:1.2rem 1rem;}
+.th-apercu .th-bloc h2{font-size:1.3rem;}
+.th-apercu .th-bloc p{font-size:.9rem;}
+.th-pt{display:inline-block;width:22px;height:22px;border:2px solid var(--noir);vertical-align:middle;}
