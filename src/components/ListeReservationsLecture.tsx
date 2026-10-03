@@ -34,13 +34,13 @@ export default function ListeReservationsLecture({ reservations }: { reservation
             <tr key={r.id}>
               <td data-l="Date">{fmt(r.created_at)}</td>
               <td data-l="Acheteur" className="bloc">
-                <strong>{r.nom}</strong><br />
+                <strong>{r.nom}</strong>{r.exposant && <> <span className="pill done">Exposant</span></>}<br />
                 <span style={{ color: '#6b6560', fontSize: '.8rem' }}>{[r.email, r.telephone].filter(Boolean).join(' · ')}</span>
               </td>
               <td data-l="Événement" style={{ fontSize: '.85rem' }}>{r.evenements?.titre}</td>
               <td data-l="Places">
-                {r.places}
-                {r.reservation_lignes?.length > 1 && (
+                {r.exposant ? '' : r.places}
+                {(r.exposant ? r.reservation_lignes?.length > 0 : r.reservation_lignes?.length > 1) && (
                   <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
                     {r.reservation_lignes.map((l: any, i: number) => <div key={i}>{l.quantite}× {l.libelle}</div>)}
                   </div>

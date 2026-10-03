@@ -148,6 +148,7 @@ export default async function Ventes({ searchParams }: { searchParams: Promise<{
             Réservation payée en espèces ou par chèque : encaissée en caisse (530000) ou en chèques à encaisser (511200), sans frais.
             La remise des chèques en banque se saisit en virement interne, de 511200 vers 512000.
           </li>
+          <li>Réservation d&apos;un exposant : portée au compte 706100, Emplacements exposants, au lieu de la billetterie.</li>
         </ul>
       </div>
 

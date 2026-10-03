@@ -55,11 +55,12 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
   /** Export comptable : toutes les réservations, tous statuts. */
   function exportComplet(resas: any[], nom: string) {
     const lignes: string[][] = [
-      ['Référence', 'Date réservation', 'Nom', 'Email', 'Téléphone',
+      ['Référence', 'Type', 'Date réservation', 'Nom', 'Email', 'Téléphone',
        'Événement', 'Places', 'Montant €', 'Statut', 'Code billet',
-       'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Remarque'],
+       'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Détail', 'Remarque'],
       ...resas.map((r) => [
         r.reference,
+        r.exposant ? 'Exposant' : 'Participant',
         new Date(r.created_at).toLocaleDateString('fr-FR'),
         r.nom, r.email ?? '', r.telephone ?? '',
         r.evenements?.titre ?? '',
@@ -70,6 +71,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
         r.mode_paiement === 'especes' ? 'Espèces' : r.mode_paiement === 'cheque' ? 'Chèque' : r.statut === 'payee' ? 'SumUp' : '',
         r.transaction_code ?? '',
         r.paiement_ref ?? '',
+        (r.reservation_lignes ?? []).map((l: any) => `${l.quantite} x ${l.libelle}`).join(', '),
         r.commentaire ?? '',
       ]),
     ];

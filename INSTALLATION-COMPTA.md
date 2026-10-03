@@ -27,3 +27,11 @@ enregistre le paiement plus tard. Mise à jour de la base : réexécuter supabas
 En comptabilité, les espèces vont en caisse (530000, journal CA) et les chèques en chèques à encaisser
 (511200, journal CH), sans frais de paiement. Quand les chèques sont déposés à la banque :
 Saisie, virement interne, de 511200 vers 512000. Idem pour un dépôt d'espèces, de 530000 vers 512000.
+
+## Exposants (marché de Noël et autres)
+
+Admin, Réservations, « + Ajouter un participant ou un exposant », onglet Exposant. Tous les événements sont proposés,
+même sans billetterie en ligne. Les formules (tailles d'emplacement, options) se créent en bas du même panneau,
+événement par événement ; sans formule, l'emplacement est à prix libre. Un exposant compte pour une présence au pointage.
+En comptabilité, ses recettes vont au compte 706100, Emplacements exposants.
+Mise à jour de la base : réexécuter supabase/comptabilite.sql.

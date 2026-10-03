@@ -92,6 +92,8 @@ export interface Reservation {
   paiement_ref: string | null;
   /** Nom de l'admin pour une réservation saisie à la main. */
   saisie_par: string | null;
+  /** Réservation d'un exposant (formules d'emplacement) plutôt que d'un participant. */
+  exposant: boolean;
 }
 
 export type Partenaire = {

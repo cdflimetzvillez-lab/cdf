@@ -11,7 +11,7 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
   const { supabase } = await requireAdmin();
 
   const [{ data: evenements }, { data: suivi }] = await Promise.all([
-    supabase.from('evenements').select('id, titre, slug, places_max, prix_centimes').eq('billetterie_active', true).order('date_debut'),
+    supabase.from('evenements').select('id, titre, slug, places_max, prix_centimes').order('date_debut'),
     supabase.from('suivi_billetterie').select('*'),
   ]);
 

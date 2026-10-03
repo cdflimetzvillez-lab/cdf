@@ -33,6 +33,7 @@ export default function LigneReservation({ resa }: { resa: any }) {
       <tr style={{ opacity: pending ? .5 : 1 }}>
         <td data-l="Acheteur" className="bloc">
           <strong>{resa.nom}</strong>
+          {resa.exposant && <> <span className="pill done">Exposant</span></>}
           {resa.email && (
             <><br /><a href={`mailto:${resa.email}`} style={{ color: '#6b6560', fontSize: '.8rem' }}>
               {resa.email}
@@ -52,8 +53,8 @@ export default function LigneReservation({ resa }: { resa: any }) {
         </td>
         <td data-l="Événement" style={{ fontSize: '.85rem' }}>{resa.evenements?.titre}</td>
         <td data-l="Places">
-          {resa.places}
-          {resa.reservation_lignes?.length > 1 && (
+          {resa.exposant ? '' : resa.places}
+          {(resa.exposant ? resa.reservation_lignes?.length > 0 : resa.reservation_lignes?.length > 1) && (
             <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
               {resa.reservation_lignes.map((l: any, i: number) => (
                 <div key={i}>{l.quantite}× {l.libelle}</div>

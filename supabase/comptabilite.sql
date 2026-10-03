@@ -25,6 +25,8 @@ alter table public.reservations add column if not exists mode_paiement text;
 alter table public.reservations add column if not exists paiement_ref text;
 alter table public.reservations add column if not exists saisie_par text;
 alter table public.reservations alter column email drop not null;
+-- Réservation d'un exposant (stand), saisie par un admin.
+alter table public.reservations add column if not exists exposant boolean not null default false;
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'reservations_mode_paiement_check') then
@@ -32,6 +34,25 @@ begin
       add constraint reservations_mode_paiement_check check (mode_paiement in ('especes', 'cheque'));
   end if;
 end $$;
+
+
+-- Formules proposées aux exposants d'un événement (tailles d'emplacement, options).
+create table if not exists public.formules_exposants (
+  id             uuid primary key default gen_random_uuid(),
+  evenement_id   uuid not null references public.evenements(id) on delete cascade,
+  libelle        text not null,
+  prix_centimes  integer not null check (prix_centimes >= 0),
+  position       integer not null default 0,
+  created_at     timestamptz not null default now()
+);
+alter table public.formules_exposants enable row level security;
+grant select, insert, update, delete on public.formules_exposants to authenticated, service_role;
+drop policy if exists formules_exposants_lecture on public.formules_exposants;
+create policy formules_exposants_lecture on public.formules_exposants for select to authenticated
+  using ((select public.is_staff()));
+drop policy if exists formules_exposants_ecriture on public.formules_exposants;
+create policy formules_exposants_ecriture on public.formules_exposants for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 
 -- =====================================================================
@@ -184,6 +205,7 @@ insert into public.compta_comptes (numero, intitule, type) values
   ('627800', 'Frais de paiement en ligne', 'charge'),
   ('651600', 'Droits d''auteur (SACEM)', 'charge'),
   ('706000', 'Billetterie des manifestations', 'produit'),
+  ('706100', 'Emplacements exposants', 'produit'),
   ('706200', 'Vidéos du Père Noël', 'produit'),
   ('707000', 'Buvette et restauration', 'produit'),
   ('708800', 'Tombolas et jeux', 'produit'),
@@ -402,7 +424,9 @@ end $$;
 
 -- Écriture d'une vente du site : recette au brut, frais de paiement en charge si un taux est réglé.
 -- p_mode (especes, cheque) : encaissement hors ligne, sur le compte du mode et sans frais.
+-- p_compte_produit : compte de produit particulier (exposants), sinon celui de la source.
 drop function if exists public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text);
+drop function if exists public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text);
 
 create or replace function public.compta__ecrire_vente(
   p_cle text,
@@ -412,7 +436,8 @@ create or replace function public.compta__ecrire_vente(
   p_montant integer,
   p_evenement uuid,
   p_statut text,
-  p_mode text default null
+  p_mode text default null,
+  p_compte_produit text default null
 )
 returns boolean
 language plpgsql security definer set search_path = public
@@ -422,6 +447,7 @@ declare
   m compta_modes_paiement%rowtype;
   v_journal text;
   v_tresorerie text;
+  v_produit text;
   v_libelle text := p_libelle;
   v_hors_ligne boolean := false;
   v_frais integer := 0;
@@ -441,6 +467,11 @@ begin
   v_evt := coalesce(p_evenement, s.compta_evenement_id);
   v_journal := s.journal_code;
   v_tresorerie := s.compte_tresorerie;
+  v_produit := s.compte_produit;
+  if p_compte_produit is not null
+     and exists (select 1 from compta_comptes where numero = p_compte_produit and actif) then
+    v_produit := p_compte_produit;
+  end if;
 
   if p_mode is not null then
     select * into m from compta_modes_paiement where mode = p_mode;
@@ -458,7 +489,7 @@ begin
 
   v_lignes := jsonb_build_array(
     jsonb_build_object('compte', v_tresorerie, 'debit', p_montant, 'credit', 0),
-    jsonb_build_object('compte', s.compte_produit, 'debit', 0, 'credit', p_montant, 'evenement_id', v_evt)
+    jsonb_build_object('compte', v_produit, 'debit', 0, 'credit', p_montant, 'evenement_id', v_evt)
   );
   if v_frais > 0 then
     v_lignes := v_lignes || jsonb_build_array(
@@ -574,7 +605,7 @@ begin
   if found and s.actif then
     for r in
       select res.id, res.reference, res.montant_centimes, res.paye_le, res.statut, res.evenement_id, res.places,
-             res.mode_paiement, coalesce(ev.titre, 'Billetterie') as titre
+             res.mode_paiement, res.exposant, coalesce(ev.titre, 'Billetterie') as titre
       from reservations res
       left join evenements ev on ev.id = res.evenement_id
       where res.paye_le is not null
@@ -586,8 +617,11 @@ begin
     loop
       if compta__ecrire_vente(
            'reservations', r.id, (r.paye_le at time zone 'Europe/Paris')::date,
-           r.titre || ', ' || coalesce(r.places, 1) || ' place(s)' || coalesce(', réf. ' || r.reference, ''),
-           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut, r.mode_paiement) then
+           r.titre
+             || case when r.exposant then ', exposant' else ', ' || coalesce(r.places, 1) || ' place(s)' end
+             || coalesce(', réf. ' || r.reference, ''),
+           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut, r.mode_paiement,
+           case when r.exposant then '706100' end) then
         v_n := v_n + 1;
       end if;
     end loop;
@@ -920,7 +954,7 @@ create policy compta_ecriture_admin on public.compta_sources for all to authenti
 revoke all on function public.compta__exercice(date) from public, anon, authenticated;
 revoke all on function public.compta__ecrire(text, date, text, jsonb, text, text, uuid, text, text, text) from public, anon, authenticated;
 revoke all on function public.compta__evenement_site(uuid, uuid) from public, anon, authenticated;
-revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text, text) from public, anon, authenticated;
 
 -- Fonctions du site : personnes connectées uniquement (le contrôle admin ou trésorière est dans la fonction).
 revoke all on function public.compta_saisir_ecriture(text, date, text, jsonb, text) from public, anon;
