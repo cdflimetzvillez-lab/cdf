@@ -24,21 +24,6 @@ export default async function Reservations({
     supabase.from('formules_exposants').select('id, evenement_id, libelle, prix_centimes').order('position'),
   ]);
 
-  // Synthèse des exposants par événement (les événements sans billetterie n'ont pas de ligne de suivi).
-  const { data: resasExposants } = await supabase
-    .from('reservations').select('evenement_id, montant_centimes, statut').eq('exposant', true);
-  const parExposant = (evenements ?? [])
-    .map((e) => {
-      const rs = (resasExposants ?? []).filter((r) => r.evenement_id === e.id);
-      const payes = rs.filter((r) => r.statut === 'payee');
-      return {
-        id: e.id, titre: e.titre, total: rs.length, payes: payes.length,
-        recette: payes.reduce((s, r) => s + r.montant_centimes, 0),
-        attente: rs.filter((r) => r.statut === 'en_attente').length,
-      };
-    })
-    .filter((e) => e.total > 0);
-
   let requete = supabase
     .from('reservations')
     .select('*, evenements(titre, slug), reservation_lignes(libelle, prix_centimes, quantite)')
@@ -50,6 +35,10 @@ export default async function Reservations({
 
   const payees = liste.filter((r) => r.statut === 'payee');
   const exposants = liste.filter((r) => r.exposant);
+  // Saisies à la main pas encore payées : la place est prise, le montant reste à encaisser.
+  const aEncaisser = liste.filter((r) => r.statut === 'en_attente' && r.saisie_par);
+  const ecart = aEncaisser.reduce((s, r) => s + r.montant_centimes, 0);
+  const placesAEncaisser = aEncaisser.reduce((s, r) => s + r.places, 0);
   const recette = payees.reduce((s, r) => s + r.montant_centimes, 0);
   const placesVendues = payees.reduce((s, r) => s + r.places, 0);
 
@@ -71,8 +60,12 @@ export default async function Reservations({
       />
 
       <div className="kpi">
-        <div><b>{placesVendues}</b><span>Places vendues</span></div>
+        <div><b>{placesVendues + placesAEncaisser}</b><span>Places réservées</span></div>
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
+        <div>
+          <b style={ecart > 0 ? { color: 'var(--evt-dark)' } : undefined}>{ecart > 0 ? `− ${euros(ecart)}` : euros(0)}</b>
+          <span>Écart à encaisser</span>
+        </div>
         <div><b>{payees.length}</b><span>Réservations payées</span></div>
         <div><b>{liste.filter((r) => r.statut === 'en_attente').length}</b><span>En attente</span></div>
         {exposants.length > 0 && (
@@ -86,27 +79,49 @@ export default async function Reservations({
           <table className="tbl cartes compact">
             <thead>
               <tr>
-                <th>Événement</th><th>Vendues</th><th>Jauge</th>
-                <th>Recette</th><th></th>
+                <th>Événement</th><th>Réservées</th><th>Jauge</th>
+                <th>Encaissé</th><th>Écart</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {(suivi as any[]).map((s) => (
+              {(suivi as any[]).map((s) => {
+                // Jauge : places payées + places saisies à la main en attente de paiement.
+                const attente = Number(s.places_a_encaisser ?? 0);
+                const reservees = Number(s.places_vendues) + attente;
+                const du = Number(s.a_encaisser_centimes ?? 0);
+                return (
                 <tr key={s.id}>
-                  <td data-l="Événement" className="bloc"><strong>{s.titre}</strong></td>
-                  <td data-l="Vendues">{s.places_vendues}</td>
+                  <td data-l="Événement" className="bloc">
+                    <strong>{s.titre}</strong>
+                    {Number(s.nb_exposants ?? 0) > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>
+                        dont {s.nb_exposants} exposant{s.nb_exposants > 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </td>
+                  <td data-l="Réservées">
+                    {reservees}
+                    {attente > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>
+                    )}
+                  </td>
                   <td data-l="Jauge" className="bloc">
                     {s.places_max
-                      ? <>{s.places_vendues} / {s.places_max}
+                      ? <>{reservees} / {s.places_max}
                           <div className="jauge">
                             <span style={{
-                              width: `${Math.min(100, (s.places_vendues / s.places_max) * 100)}%`,
+                              width: `${Math.min(100, (reservees / s.places_max) * 100)}%`,
                             }} />
                           </div>
                         </>
                       : 'illimitée'}
                   </td>
-                  <td data-l="Recette">{euros(s.recette_centimes)}</td>
+                  <td data-l="Encaissé">{euros(s.recette_centimes)}</td>
+                  <td data-l="Écart">
+                    {du > 0
+                      ? <strong style={{ color: 'var(--evt-dark)' }}>− {euros(du)}</strong>
+                      : euros(0)}
+                  </td>
                   <td className="actions">
                     <Link className="btn btn-y btn-sm" href={`/admin/pointage/${s.id}`}>
                       Pointer
@@ -116,33 +131,8 @@ export default async function Reservations({
                     </Link>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {parExposant.length > 0 && (
-        <div className="panel">
-          <h2>Exposants par événement</h2>
-          <table className="tbl cartes compact">
-            <thead>
-              <tr><th>Événement</th><th>Exposants</th><th>Payés</th><th>En attente</th><th>Recette</th><th></th></tr>
-            </thead>
-            <tbody>
-              {parExposant.map((e) => (
-                <tr key={e.id}>
-                  <td data-l="Événement" className="bloc"><strong>{e.titre}</strong></td>
-                  <td data-l="Exposants">{e.total}</td>
-                  <td data-l="Payés">{e.payes}</td>
-                  <td data-l="En attente">{e.attente}</td>
-                  <td data-l="Recette">{euros(e.recette)}</td>
-                  <td className="actions">
-                    <Link className="btn btn-y btn-sm" href={`/admin/pointage/${e.id}`}>Pointer</Link>{' '}
-                    <Link className="btn btn-w btn-sm" href={`/admin/reservations?evt=${e.id}`}>Détail</Link>
-                  </td>
-                </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

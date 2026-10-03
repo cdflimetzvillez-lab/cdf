@@ -26,6 +26,10 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
   const payees = liste.filter((r) => r.statut === 'payee');
   const recette = payees.reduce((s, r) => s + r.montant_centimes, 0);
   const placesVendues = payees.reduce((s, r) => s + r.places, 0);
+  // Saisies à la main pas encore payées : la place est prise, le montant reste à encaisser.
+  const aEncaisser = liste.filter((r) => r.statut === 'en_attente' && r.saisie_par);
+  const ecart = aEncaisser.reduce((s, r) => s + r.montant_centimes, 0);
+  const placesAEncaisser = aEncaisser.reduce((s, r) => s + r.places, 0);
 
   return (
     <>
@@ -38,8 +42,12 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
       </div>
 
       <div className="kpi">
-        <div><b>{placesVendues}</b><span>Places vendues</span></div>
+        <div><b>{placesVendues + placesAEncaisser}</b><span>Places réservées</span></div>
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
+        <div>
+          <b style={ecart > 0 ? { color: 'var(--evt-dark)' } : undefined}>{ecart > 0 ? `− ${euros(ecart)}` : euros(0)}</b>
+          <span>Écart à encaisser</span>
+        </div>
         <div><b>{payees.length}</b><span>Réservations payées</span></div>
         <div><b>{liste.filter((r) => r.statut === 'en_attente').length}</b><span>En attente</span></div>
       </div>
@@ -48,25 +56,42 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
         <div className="panel">
           <h2>Par événement</h2>
           <table className="tbl cartes compact">
-            <thead><tr><th>Événement</th><th>Vendues</th><th>Jauge</th><th>Recette</th><th></th></tr></thead>
+            <thead><tr><th>Événement</th><th>Réservées</th><th>Jauge</th><th>Encaissé</th><th>Écart</th><th></th></tr></thead>
             <tbody>
-              {(suivi as any[]).map((s) => (
+              {(suivi as any[]).map((s) => {
+                // Jauge : places payées + places saisies à la main en attente de paiement.
+                const attente = Number(s.places_a_encaisser ?? 0);
+                const reservees = Number(s.places_vendues) + attente;
+                const du = Number(s.a_encaisser_centimes ?? 0);
+                return (
                 <tr key={s.id}>
-                  <td data-l="Événement" className="bloc"><strong>{s.titre}</strong></td>
-                  <td data-l="Vendues">{s.places_vendues}</td>
+                  <td data-l="Événement" className="bloc">
+                    <strong>{s.titre}</strong>
+                    {Number(s.nb_exposants ?? 0) > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {s.nb_exposants} exposant{s.nb_exposants > 1 ? 's' : ''}</div>
+                    )}
+                  </td>
+                  <td data-l="Réservées">
+                    {reservees}
+                    {attente > 0 && <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>}
+                  </td>
                   <td data-l="Jauge" className="bloc">
                     {s.places_max
-                      ? <>{s.places_vendues} / {s.places_max}
-                          <div className="jauge"><span style={{ width: `${Math.min(100, (s.places_vendues / s.places_max) * 100)}%` }} /></div>
+                      ? <>{reservees} / {s.places_max}
+                          <div className="jauge"><span style={{ width: `${Math.min(100, (reservees / s.places_max) * 100)}%` }} /></div>
                         </>
                       : 'illimitée'}
                   </td>
-                  <td data-l="Recette">{euros(s.recette_centimes)}</td>
+                  <td data-l="Encaissé">{euros(s.recette_centimes)}</td>
+                  <td data-l="Écart">
+                    {du > 0 ? <strong style={{ color: 'var(--evt-dark)' }}>− {euros(du)}</strong> : euros(0)}
+                  </td>
                   <td className="actions">
                     <Link className="btn btn-w btn-sm" href={`/admin/tresorerie?evt=${s.id}`}>Détail</Link>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

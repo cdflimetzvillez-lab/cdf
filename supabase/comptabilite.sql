@@ -36,6 +36,45 @@ begin
 end $$;
 
 
+-- Suivi par événement. Une réservation saisie à la main compte dans la jauge dès la saisie ;
+-- tant qu'elle n'est pas payée, son montant apparaît en écart à encaisser.
+-- Les colonnes d'origine sont inchangées, trois colonnes sont ajoutées à la fin.
+do $$
+declare
+  v_invoker boolean;
+begin
+  -- On conserve le réglage de sécurité actuel de la vue.
+  select c.reloptions::text ~ 'security_invoker=(true|on)' into v_invoker
+  from pg_class c where c.oid = to_regclass('public.suivi_billetterie');
+
+  create or replace view public.suivi_billetterie as
+  select e.id,
+         e.titre,
+         e.slug,
+         e.date_debut,
+         e.places_max,
+         e.prix_centimes,
+         coalesce(sum(r.places) filter (where r.statut = 'payee'), 0::bigint) as places_vendues,
+         coalesce(sum(r.montant_centimes) filter (where r.statut = 'payee'), 0::bigint) as recette_centimes,
+         count(r.id) filter (where r.statut = 'payee') as nb_reservations,
+         count(r.id) filter (where r.statut = 'en_attente') as nb_en_attente,
+         coalesce(sum(r.places) filter (where r.statut = 'en_attente' and r.saisie_par is not null), 0::bigint) as places_a_encaisser,
+         coalesce(sum(r.montant_centimes) filter (where r.statut = 'en_attente' and r.saisie_par is not null), 0::bigint) as a_encaisser_centimes,
+         count(r.id) filter (where r.exposant and r.statut in ('payee', 'en_attente')) as nb_exposants
+  from public.evenements e
+  left join public.reservations r on r.evenement_id = e.id
+  where e.billetterie_active = true
+     or exists (select 1 from public.reservations x where x.evenement_id = e.id and x.saisie_par is not null)
+  group by e.id;
+
+  if v_invoker then
+    alter view public.suivi_billetterie set (security_invoker = true);
+  end if;
+end $$;
+-- La vue ne sert qu'à l'admin : pas d'accès pour les visiteurs non connectés.
+revoke all on public.suivi_billetterie from anon;
+grant select on public.suivi_billetterie to authenticated, service_role;
+
 -- Formules proposées aux exposants d'un événement (tailles d'emplacement, options).
 create table if not exists public.formules_exposants (
   id             uuid primary key default gen_random_uuid(),
