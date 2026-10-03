@@ -17,3 +17,13 @@ src/app/admin/(protected)/compta/. Fichiers modifiés : src/app/admin/(protected
 
 Fonctionnement : une écriture validée ne se supprime pas, elle s'annule par une écriture inverse
 depuis la fiche de la pièce. Un exercice clôturé n'accepte plus d'écriture.
+
+## Réservations saisies à la main (espèces, chèque)
+
+Admin, Réservations, « + Ajouter un participant » : nom, places, montant (modifiable, 0 pour une invitation),
+paiement en espèces, par chèque ou pas encore payé. Le bouton « Encaisser » d'une réservation en attente
+enregistre le paiement plus tard. Mise à jour de la base : réexécuter supabase/comptabilite.sql.
+
+En comptabilité, les espèces vont en caisse (530000, journal CA) et les chèques en chèques à encaisser
+(511200, journal CH), sans frais de paiement. Quand les chèques sont déposés à la banque :
+Saisie, virement interne, de 511200 vers 512000. Idem pour un dépôt d'espèces, de 530000 vers 512000.

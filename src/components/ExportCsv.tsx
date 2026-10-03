@@ -43,7 +43,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
       ['Nom', 'Places', 'Code billet', 'Téléphone', 'Email', 'Remarque', 'Présent (à cocher)'],
       ...payees.map((r) => [
         r.nom, String(r.places), r.code_billet,
-        r.telephone ?? '', r.email, r.commentaire ?? '', '',
+        r.telephone ?? '', r.email ?? '', r.commentaire ?? '', '',
       ]),
       [],
       ['TOTAL', String(total), '', '', '', '', ''],
@@ -57,17 +57,19 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
     const lignes: string[][] = [
       ['Référence', 'Date réservation', 'Nom', 'Email', 'Téléphone',
        'Événement', 'Places', 'Montant €', 'Statut', 'Code billet',
-       'Pointé', 'Transaction SumUp', 'Remarque'],
+       'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Remarque'],
       ...resas.map((r) => [
         r.reference,
         new Date(r.created_at).toLocaleDateString('fr-FR'),
-        r.nom, r.email, r.telephone ?? '',
+        r.nom, r.email ?? '', r.telephone ?? '',
         r.evenements?.titre ?? '',
         String(r.places),
         (r.montant_centimes / 100).toFixed(2).replace('.', ','),
         r.statut, r.code_billet,
         r.scanne_le ? 'oui' : 'non',
+        r.mode_paiement === 'especes' ? 'Espèces' : r.mode_paiement === 'cheque' ? 'Chèque' : r.statut === 'payee' ? 'SumUp' : '',
         r.transaction_code ?? '',
+        r.paiement_ref ?? '',
         r.commentaire ?? '',
       ]),
     ];
@@ -116,7 +118,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
             Export comptable
           </div>
           <p className="export-aide">
-            Toutes les réservations, tous statuts, avec les références SumUp.
+            Toutes les réservations, tous statuts, avec le mode de paiement et les références SumUp.
           </p>
           <button
             className="export-item"

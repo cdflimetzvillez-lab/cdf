@@ -4,6 +4,7 @@ import { euros } from '@/lib/sumup';
 import ListeReservations from '@/components/ListeReservations';
 import ExportCsv from '@/components/ExportCsv';
 import VerifierSumUp from '@/components/VerifierSumUp';
+import FormReservationManuelle from '@/components/FormReservationManuelle';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +14,12 @@ export default async function Reservations({
   const { evt } = await searchParams;
   const { supabase } = await requireAdmin();
 
-  const [{ data: evenements }, { data: suivi }] = await Promise.all([
+  const [{ data: evenements }, { data: suivi }, { data: tarifs }] = await Promise.all([
     supabase.from('evenements')
       .select('id, titre, slug, places_max, prix_centimes')
       .eq('billetterie_active', true).order('date_debut'),
     supabase.from('suivi_billetterie').select('*'),
+    supabase.from('tarifs').select('id, evenement_id, libelle, prix_centimes').order('position'),
   ]);
 
   let requete = supabase
@@ -38,13 +40,15 @@ export default async function Reservations({
       <div className="adm-h">
         <div>
           <h1>Réservations</h1>
-          <p>Suivi des paiements SumUp, pointage et liste d&apos;émargement.</p>
+          <p>Suivi des paiements (SumUp, espèces, chèques), pointage et liste d&apos;émargement.</p>
         </div>
         <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <VerifierSumUp nb={liste.filter((r) => r.statut === 'en_attente' && r.checkout_id).length} />
           <ExportCsv reservations={liste} evenements={evenements ?? []} />
         </div>
       </div>
+
+      <FormReservationManuelle evenements={evenements ?? []} tarifs={tarifs ?? []} evenementInitial={evt} />
 
       <div className="kpi">
         <div><b>{placesVendues}</b><span>Places vendues</span></div>

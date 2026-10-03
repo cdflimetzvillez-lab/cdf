@@ -193,7 +193,7 @@ export async function verifierPaiement(reference: string) {
    Silencieux si RESEND_API_KEY n'est pas configurée :
    la réservation reste valide, seul l'envoi est désactivé.
    ========================================================= */
-export async function envoyerBillet(resa: any) {
+export async function envoyerBillet(resa: any, alerterComite = true) {
   if (!process.env.RESEND_API_KEY || !resa) return;
 
   const evt = resa.evenements ?? {};
@@ -231,28 +231,30 @@ export async function envoyerBillet(resa: any) {
       body: JSON.stringify(corps),
     });
 
-  // --- billet au client ---
-  try {
-    const r = await envoyer({
-      from,
-      to: [resa.email],
-      reply_to: process.env.CONTACT_EMAIL,
-      subject: `Votre billet — ${donnees.evenement.titre}`,
-      html: billetHtml(donnees, urlSite),
-      text: billetTexte(donnees),
-    });
-    if (!r.ok) console.error('[envoyerBillet] client', r.status, await r.text());
-  } catch (e) {
-    console.error('[envoyerBillet] client', e);
+  // --- billet au client (les réservations saisies à la main peuvent ne pas avoir d'e-mail) ---
+  if (resa.email) {
+    try {
+      const r = await envoyer({
+        from,
+        to: [resa.email],
+        reply_to: process.env.CONTACT_EMAIL,
+        subject: `Votre billet — ${donnees.evenement.titre}`,
+        html: billetHtml(donnees, urlSite),
+        text: billetTexte(donnees),
+      });
+      if (!r.ok) console.error('[envoyerBillet] client', r.status, await r.text());
+    } catch (e) {
+      console.error('[envoyerBillet] client', e);
+    }
   }
 
   // --- alerte au comité ---
-  if (process.env.CONTACT_EMAIL) {
+  if (alerterComite && process.env.CONTACT_EMAIL) {
     try {
       const r = await envoyer({
         from,
         to: [process.env.CONTACT_EMAIL],
-        reply_to: resa.email,
+        reply_to: resa.email ?? undefined,
         subject: `Réservation : ${resa.nom} — ${donnees.evenement.titre}`,
         html: alerteReservationHtml(donnees),
       });
@@ -275,11 +277,27 @@ export async function marquerScanne(id: string) {
   revalidatePath('/admin/reservations');
 }
 
-export async function changerStatutResa(id: string, statut: string) {
+export async function changerStatutResa(id: string, statut: string): Promise<{ erreur?: string } | void> {
   const { supabase, isAdmin } = await requireAdmin();
   if (!isAdmin) return;
-  await supabase.from('reservations').update({ statut }).eq('id', id);
+
+  const maj: Record<string, unknown> = { statut };
+  if (statut === 'payee') {
+    const { data: resa } = await supabase
+      .from('reservations').select('paye_le, checkout_id').eq('id', id).maybeSingle();
+    if (resa && !resa.paye_le) {
+      // Sans paiement en ligne, le mode (espèces ou chèque) doit être indiqué.
+      if (!resa.checkout_id) {
+        return { erreur: 'Paiement hors ligne : utilise le bouton « Encaisser » pour indiquer espèces ou chèque.' };
+      }
+      maj.paye_le = new Date().toISOString();
+    }
+  }
+
+  const { error } = await supabase.from('reservations').update(maj).eq('id', id);
+  if (error) return { erreur: error.message };
   revalidatePath('/admin/reservations');
+  revalidatePath('/admin/tresorerie');
 }
 
 export async function supprimerReservation(id: string) {
@@ -308,4 +326,153 @@ export async function verifierSumUpAdmin(reference?: string): Promise<{ verifiee
   }
   revalidatePath('/admin/reservations');
   return { verifiees: refs.length, changees };
+}
+
+/* =========================================================
+   ADMIN — réservation saisie à la main, paiement hors ligne
+   ========================================================= */
+export type EtatManuel = { ok?: string; erreur?: string } | null;
+
+const MODES_HORS_LIGNE = ['especes', 'cheque'];
+
+/** « 25 », « 25,5 » ou « 25.50 » -> centimes. null si la saisie est invalide. */
+function centimes(saisie: string): number | null {
+  const propre = saisie.replace(/[\s\u00a0\u202f€]/g, '').replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(propre)) return null;
+  return Math.round(parseFloat(propre) * 100);
+}
+
+/** Explique l'erreur quand les colonnes de paiement n'ont pas encore été créées. */
+function erreurBase(message: string): string {
+  return /mode_paiement|paiement_ref|saisie_par/.test(message)
+    ? 'La base n\u2019est pas à jour : exécute supabase/comptabilite.sql dans Supabase, puis réessaie.'
+    : message;
+}
+
+/** Ajoute un participant depuis l'admin, payé en espèces, par chèque, ou pas encore payé. */
+export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData): Promise<EtatManuel> {
+  const { supabase, isAdmin, user } = await requireAdmin();
+  if (!isAdmin || !user) return { erreur: 'Accès refusé.' };
+
+  const evenementId = String(fd.get('evenement_id') ?? '');
+  const nom         = String(fd.get('nom') ?? '').trim();
+  const email       = String(fd.get('email') ?? '').trim().toLowerCase();
+  const telephone   = String(fd.get('telephone') ?? '').trim();
+  const commentaire = String(fd.get('commentaire') ?? '').trim();
+  const paiement    = String(fd.get('paiement') ?? 'attente'); // especes | cheque | attente
+  const paiementRef = String(fd.get('paiement_ref') ?? '').trim();
+  const montantTxt  = String(fd.get('montant') ?? '').trim();
+  const tarifIds    = fd.getAll('tarif_id').map(String);
+  const tarifQtes   = fd.getAll('tarif_qte').map((v) => Math.max(0, Math.floor(Number(v) || 0)));
+  const places      = tarifQtes.reduce((s, q) => s + q, 0);
+
+  if (nom.length < 2) return { erreur: 'Le nom est obligatoire.' };
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse e-mail invalide.' };
+  if (places < 1) return { erreur: 'Indique au moins une place.' };
+  if (paiement !== 'attente' && !MODES_HORS_LIGNE.includes(paiement)) return { erreur: 'Mode de paiement invalide.' };
+
+  const db = createAdminClient();
+
+  const { data: evt } = await db
+    .from('evenements').select('id, titre, prix_centimes, places_max').eq('id', evenementId).maybeSingle();
+  if (!evt) return { erreur: 'Événement introuvable.' };
+
+  // Jauge : bloquante, sauf dépassement demandé explicitement.
+  if (evt.places_max !== null && fd.get('depasser') !== 'on') {
+    const { data: restantes } = await db.rpc('places_restantes', { evt_id: evt.id });
+    if (typeof restantes === 'number' && restantes < places) {
+      return {
+        erreur: `Il ne reste que ${restantes} place${restantes > 1 ? 's' : ''}. Coche « Autoriser le dépassement de la jauge » pour l\u2019ajouter quand même.`,
+      };
+    }
+  }
+
+  const { data: grille } = await db.from('tarifs').select('id, libelle, prix_centimes').eq('evenement_id', evt.id);
+  const lignes: { libelle: string; prix_centimes: number; quantite: number }[] = [];
+  let montant = 0;
+  tarifIds.forEach((id, i) => {
+    const q = tarifQtes[i] ?? 0;
+    if (q <= 0) return;
+    const t = (grille ?? []).find((x) => x.id === id);
+    const prix = t ? t.prix_centimes : evt.prix_centimes ?? 0;
+    lignes.push({ libelle: t?.libelle ?? 'Place', prix_centimes: prix, quantite: q });
+    montant += prix * q;
+  });
+  if (lignes.length === 0) return { erreur: 'Indique au moins une place.' };
+
+  // Montant encaissé : celui du formulaire s'il a été modifié (tarif spécial, invitation à 0).
+  if (montantTxt !== '') {
+    const saisi = centimes(montantTxt);
+    if (saisi === null) return { erreur: 'Montant invalide.' };
+    montant = saisi;
+  }
+
+  const { data: moi } = await supabase.from('admins').select('nom').eq('id', user.id).maybeSingle();
+  const paye = paiement !== 'attente';
+
+  const { data: resa, error } = await db
+    .from('reservations')
+    .insert({
+      evenement_id: evt.id,
+      nom,
+      email: email || null,
+      telephone: telephone || null,
+      commentaire: commentaire || null,
+      places,
+      montant_centimes: montant,
+      reference: genererReference(),
+      statut: paye ? 'payee' : 'en_attente',
+      paye_le: paye ? new Date().toISOString() : null,
+      mode_paiement: paye ? paiement : null,
+      paiement_ref: paye && paiementRef ? paiementRef : null,
+      saisie_par: moi?.nom ?? user.email ?? 'Admin',
+    })
+    .select(CHAMPS_EVT)
+    .single();
+
+  if (error || !resa) {
+    console.error('[ajouterReservationManuelle]', error);
+    return { erreur: erreurBase(error?.message ?? 'Impossible de créer la réservation.') };
+  }
+
+  await db.from('reservation_lignes').insert(lignes.map((l) => ({ reservation_id: resa.id, ...l })));
+
+  if (paye && email && fd.get('envoyer_billet') === 'on') await envoyerBillet(resa, false);
+
+  revalidatePath('/admin/reservations');
+  revalidatePath('/admin/tresorerie');
+  return {
+    ok: `${nom} ajouté, ${places} place${places > 1 ? 's' : ''}, code billet ${resa.code_billet}. ${paye ? 'Paiement enregistré.' : 'Paiement en attente.'}`,
+  };
+}
+
+/** Enregistre le paiement en espèces ou par chèque d'une réservation non payée. */
+export async function encaisserReservation(id: string, mode: string, ref?: string): Promise<{ ok?: boolean; erreur?: string }> {
+  const { isAdmin } = await requireAdmin();
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+  if (!MODES_HORS_LIGNE.includes(mode)) return { erreur: 'Mode de paiement invalide.' };
+
+  const db = createAdminClient();
+  const { data: resa } = await db.from('reservations').select('id, statut').eq('id', id).maybeSingle();
+  if (!resa) return { erreur: 'Réservation introuvable.' };
+  if (resa.statut === 'payee') return { erreur: 'Cette réservation est déjà payée.' };
+
+  const { data: maj, error } = await db
+    .from('reservations')
+    .update({
+      statut: 'payee',
+      paye_le: new Date().toISOString(),
+      mode_paiement: mode,
+      paiement_ref: ref?.trim() || null,
+    })
+    .eq('id', id)
+    .select(CHAMPS_EVT)
+    .single();
+  if (error) return { erreur: erreurBase(error.message) };
+
+  if (maj?.email) await envoyerBillet(maj, false);
+
+  revalidatePath('/admin/reservations');
+  revalidatePath('/admin/tresorerie');
+  return { ok: true };
 }

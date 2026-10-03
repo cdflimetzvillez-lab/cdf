@@ -35,7 +35,7 @@ export default function ListeReservationsLecture({ reservations }: { reservation
               <td data-l="Date">{fmt(r.created_at)}</td>
               <td data-l="Acheteur" className="bloc">
                 <strong>{r.nom}</strong><br />
-                <span style={{ color: '#6b6560', fontSize: '.8rem' }}>{r.email}{r.telephone && <> · {r.telephone}</>}</span>
+                <span style={{ color: '#6b6560', fontSize: '.8rem' }}>{[r.email, r.telephone].filter(Boolean).join(' · ')}</span>
               </td>
               <td data-l="Événement" style={{ fontSize: '.85rem' }}>{r.evenements?.titre}</td>
               <td data-l="Places">
@@ -46,7 +46,14 @@ export default function ListeReservationsLecture({ reservations }: { reservation
                   </div>
                 )}
               </td>
-              <td data-l="Montant">{euros(r.montant_centimes)}</td>
+              <td data-l="Montant">
+                {euros(r.montant_centimes)}
+                {r.mode_paiement && (
+                  <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
+                    {r.mode_paiement === 'especes' ? 'Espèces' : 'Chèque'}{r.paiement_ref ? ` n° ${r.paiement_ref}` : ''}
+                  </div>
+                )}
+              </td>
               <td data-l="Billet"><code style={{ fontSize: '.8rem', fontWeight: 700 }}>{r.code_billet}</code>{r.scanne_le && <> <span className="pill done">Entré</span></>}</td>
               <td data-l="Statut"><span className={`pill ${CLASSE[r.statut] ?? 'off'}`}>{LIBELLES[r.statut] ?? r.statut}</span></td>
             </tr>

@@ -144,6 +144,10 @@ export default async function Ventes({ searchParams }: { searchParams: Promise<{
           <li>Vente payée : débit du compte d&apos;encaissement, crédit du compte de produit, au montant brut.</li>
           <li>Frais de paiement : calculés avec le taux réglé ici, portés en charge dans la même pièce. À 0, aucun frais n&apos;est écrit.</li>
           <li>Un changement de taux ne s&apos;applique qu&apos;aux ventes importées ensuite.</li>
+          <li>
+            Réservation payée en espèces ou par chèque : encaissée en caisse (530000) ou en chèques à encaisser (511200), sans frais.
+            La remise des chèques en banque se saisit en virement interne, de 511200 vers 512000.
+          </li>
         </ul>
       </div>
 

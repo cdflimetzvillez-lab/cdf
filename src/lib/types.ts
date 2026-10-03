@@ -73,7 +73,8 @@ export interface Reservation {
   id: string;
   evenement_id: string;
   nom: string;
-  email: string;
+  /** Vide pour certaines réservations saisies à la main. */
+  email: string | null;
   telephone: string | null;
   commentaire: string | null;
   places: number;
@@ -86,6 +87,11 @@ export interface Reservation {
   code_billet: string;
   scanne_le: string | null;
   created_at: string;
+  /** Paiement hors ligne ; vide = paiement en ligne (SumUp). */
+  mode_paiement: 'especes' | 'cheque' | null;
+  paiement_ref: string | null;
+  /** Nom de l'admin pour une réservation saisie à la main. */
+  saisie_par: string | null;
 }
 
 export type Partenaire = {

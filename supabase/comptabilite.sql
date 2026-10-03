@@ -2,7 +2,7 @@
 -- CDF Limetz-Villez : module comptabilité
 -- Fichier : supabase/comptabilite.sql
 -- À exécuter dans l'éditeur SQL du projet Supabase du CDF (pas WayPilot).
--- Script relançable : il ne supprime aucune donnée.
+-- Script relançable : il ne supprime aucune donnée et sert aussi de mise à jour.
 -- Tous les montants sont en centimes, comme dans le reste du site.
 -- =====================================================================
 
@@ -15,6 +15,21 @@ begin
      or to_regclass('public.pn_commandes') is null
      or to_regclass('public.tdn_commandes') is null then
     raise exception 'Mauvais projet Supabase : is_staff(), reservations, pn_commandes ou tdn_commandes introuvable. Ouvre le projet du CDF.';
+  end if;
+end $$;
+
+
+-- Réservations saisies à la main dans l'admin : paiement en espèces ou par chèque.
+-- mode_paiement vide = paiement en ligne (SumUp).
+alter table public.reservations add column if not exists mode_paiement text;
+alter table public.reservations add column if not exists paiement_ref text;
+alter table public.reservations add column if not exists saisie_par text;
+alter table public.reservations alter column email drop not null;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'reservations_mode_paiement_check') then
+    alter table public.reservations
+      add constraint reservations_mode_paiement_check check (mode_paiement in ('especes', 'cheque'));
   end if;
 end $$;
 
@@ -125,6 +140,14 @@ create table if not exists public.compta_sources (
   importer_depuis      date not null default date '2026-01-01'
 );
 
+-- Paiements hors ligne : journal et compte d'encaissement par mode.
+create table if not exists public.compta_modes_paiement (
+  mode               text primary key,
+  libelle            text not null,
+  journal_code       text not null references public.compta_journaux(code),
+  compte_tresorerie  text not null references public.compta_comptes(numero)
+);
+
 create table if not exists public.compta_rapprochements (
   id                     uuid primary key default gen_random_uuid(),
   compte_numero          text not null references public.compta_comptes(numero),
@@ -143,6 +166,7 @@ create table if not exists public.compta_rapprochements (
 insert into public.compta_comptes (numero, intitule, type) values
   ('110000', 'Report à nouveau', 'bilan'),
   ('120000', 'Résultat de l''exercice', 'bilan'),
+  ('511200', 'Chèques à encaisser', 'tresorerie'),
   ('512000', 'Banque', 'tresorerie'),
   ('517000', 'Encaissements en ligne (SumUp)', 'tresorerie'),
   ('517100', 'Encaissements en ligne (Stripe)', 'tresorerie'),
@@ -171,6 +195,7 @@ on conflict (numero) do nothing;
 insert into public.compta_journaux (code, libelle, compte_tresorerie) values
   ('BQ', 'Banque', '512000'),
   ('CA', 'Caisse', '530000'),
+  ('CH', 'Chèques à encaisser', '511200'),
   ('SU', 'Ventes du site (SumUp)', '517000'),
   ('ST', 'Ventes du site (Stripe)', '517100'),
   ('OD', 'Opérations diverses', null),
@@ -182,13 +207,15 @@ insert into public.compta_exercices (libelle, date_debut, date_fin) values
 on conflict (libelle) do nothing;
 
 insert into public.compta_evenements (code, libelle, date_evenement, statut) values
-  ('TOMB',  'Grande Tombola de Noël', date '2026-12-20', 'en_cours'),
-  ('ARBRE', 'Arbre de Noël',          date '2026-12-20', 'en_cours'),
-  ('TRES',  'Trésors de Noël',        null,              'en_cours'),
-  ('PNOEL', 'Le Père Noël te répond', null,              'en_cours'),
-  ('NAN',   'Tombola du Nouvel An',   date '2026-12-31', 'a_venir'),
-  ('ROUE',  'Roue de la Rentrée',     null,              'termine')
+  ('TRES',  'Trésors de Noël',        null, 'en_cours'),
+  ('PNOEL', 'Le Père Noël te répond', null, 'en_cours'),
+  ('ROUE',  'Roue de la Rentrée',     null, 'termine')
 on conflict (code) do nothing;
+
+insert into public.compta_modes_paiement (mode, libelle, journal_code, compte_tresorerie) values
+  ('especes', 'Espèces', 'CA', '530000'),
+  ('cheque',  'Chèque',  'CH', '511200')
+on conflict (mode) do nothing;
 
 -- Sources de ventes. "orders" (ancienne billetterie Stripe) est désactivée par défaut.
 insert into public.compta_sources (cle, libelle, actif, journal_code, compte_produit, compte_tresorerie, compte_frais, compta_evenement_id) values
@@ -374,6 +401,9 @@ begin
 end $$;
 
 -- Écriture d'une vente du site : recette au brut, frais de paiement en charge si un taux est réglé.
+-- p_mode (especes, cheque) : encaissement hors ligne, sur le compte du mode et sans frais.
+drop function if exists public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text);
+
 create or replace function public.compta__ecrire_vente(
   p_cle text,
   p_source_id uuid,
@@ -381,13 +411,19 @@ create or replace function public.compta__ecrire_vente(
   p_libelle text,
   p_montant integer,
   p_evenement uuid,
-  p_statut text
+  p_statut text,
+  p_mode text default null
 )
 returns boolean
 language plpgsql security definer set search_path = public
 as $$
 declare
   s compta_sources%rowtype;
+  m compta_modes_paiement%rowtype;
+  v_journal text;
+  v_tresorerie text;
+  v_libelle text := p_libelle;
+  v_hors_ligne boolean := false;
   v_frais integer := 0;
   v_evt uuid;
   v_lignes jsonb;
@@ -403,23 +439,35 @@ begin
   end if;
 
   v_evt := coalesce(p_evenement, s.compta_evenement_id);
+  v_journal := s.journal_code;
+  v_tresorerie := s.compte_tresorerie;
 
-  if s.taux_frais > 0 or s.frais_fixe_centimes > 0 then
+  if p_mode is not null then
+    select * into m from compta_modes_paiement where mode = p_mode;
+    if found then
+      v_hors_ligne := true;
+      v_journal := m.journal_code;
+      v_tresorerie := m.compte_tresorerie;
+      v_libelle := p_libelle || ' (' || lower(m.libelle) || ')';
+    end if;
+  end if;
+
+  if not v_hors_ligne and (s.taux_frais > 0 or s.frais_fixe_centimes > 0) then
     v_frais := least(round(p_montant * s.taux_frais / 100.0)::integer + s.frais_fixe_centimes, p_montant - 1);
   end if;
 
   v_lignes := jsonb_build_array(
-    jsonb_build_object('compte', s.compte_tresorerie, 'debit', p_montant, 'credit', 0),
+    jsonb_build_object('compte', v_tresorerie, 'debit', p_montant, 'credit', 0),
     jsonb_build_object('compte', s.compte_produit, 'debit', 0, 'credit', p_montant, 'evenement_id', v_evt)
   );
   if v_frais > 0 then
     v_lignes := v_lignes || jsonb_build_array(
       jsonb_build_object('compte', s.compte_frais, 'debit', v_frais, 'credit', 0, 'evenement_id', v_evt, 'libelle', 'Frais de paiement'),
-      jsonb_build_object('compte', s.compte_tresorerie, 'debit', 0, 'credit', v_frais, 'libelle', 'Frais de paiement')
+      jsonb_build_object('compte', v_tresorerie, 'debit', 0, 'credit', v_frais, 'libelle', 'Frais de paiement')
     );
   end if;
 
-  perform compta__ecrire(s.journal_code, p_date, p_libelle, v_lignes, 'site', p_cle, p_source_id, p_statut, null, 'Import site');
+  perform compta__ecrire(v_journal, p_date, v_libelle, v_lignes, 'site', p_cle, p_source_id, p_statut, null, 'Import site');
   return true;
 end $$;
 
@@ -506,7 +554,7 @@ begin
   return v_id;
 end $$;
 
--- Import des ventes payées du site. Renvoie le nombre d'écritures créées.
+-- Import des ventes payées du site (statut payee). Renvoie le nombre d'écritures créées.
 create or replace function public.compta_importer_ventes()
 returns integer
 language plpgsql security definer set search_path = public
@@ -526,10 +574,11 @@ begin
   if found and s.actif then
     for r in
       select res.id, res.reference, res.montant_centimes, res.paye_le, res.statut, res.evenement_id, res.places,
-             coalesce(ev.titre, 'Billetterie') as titre
+             res.mode_paiement, coalesce(ev.titre, 'Billetterie') as titre
       from reservations res
       left join evenements ev on ev.id = res.evenement_id
       where res.paye_le is not null
+        and res.statut = 'payee'
         and coalesce(res.montant_centimes, 0) > 0
         and (res.paye_le at time zone 'Europe/Paris')::date >= s.importer_depuis
         and not exists (select 1 from compta_ecritures ce where ce.source_table = 'reservations' and ce.source_id = res.id)
@@ -538,7 +587,7 @@ begin
       if compta__ecrire_vente(
            'reservations', r.id, (r.paye_le at time zone 'Europe/Paris')::date,
            r.titre || ', ' || coalesce(r.places, 1) || ' place(s)' || coalesce(', réf. ' || r.reference, ''),
-           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut) then
+           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut, r.mode_paiement) then
         v_n := v_n + 1;
       end if;
     end loop;
@@ -575,6 +624,7 @@ begin
              coalesce(cardinality(c.participant_ids), 0) as nb
       from tdn_commandes c
       where c.paye_le is not null
+        and c.statut = 'payee'
         and coalesce(c.montant_centimes, 0) > 0
         and (c.paye_le at time zone 'Europe/Paris')::date >= s.importer_depuis
         and not exists (select 1 from compta_ecritures ce where ce.source_table = 'tdn_commandes' and ce.source_id = c.id)
@@ -596,6 +646,7 @@ begin
       select c.id, c.reference, c.montant_centimes, c.paye_le, c.statut
       from pn_commandes c
       where c.paye_le is not null
+        and c.statut = 'payee'
         and coalesce(c.test, false) = false
         and coalesce(c.montant_centimes, 0) > 0
         and (c.paye_le at time zone 'Europe/Paris')::date >= s.importer_depuis
@@ -614,7 +665,8 @@ begin
   return v_n;
 end $$;
 
--- Ventes importées dont le statut a changé depuis l'import (remboursement, annulation, suppression).
+-- Ventes importées à contrôler : statut changé depuis l'import (remboursement, annulation, suppression)
+-- ou vente qui n'est pas au statut payee.
 create or replace function public.compta_ventes_a_verifier()
 returns table (
   ecriture_id uuid,
@@ -650,7 +702,8 @@ begin
   where ce.source_table is not null
     and ce.verifie_le is null
     and ce.contrepassee_par is null
-    and cur.statut is distinct from ce.source_statut
+    and (cur.statut is distinct from ce.source_statut
+         or (ce.source_table <> 'orders' and cur.statut <> 'payee'))
   order by ce.date_piece desc;
 end $$;
 
@@ -799,12 +852,13 @@ alter table public.compta_ecritures      enable row level security;
 alter table public.compta_lignes         enable row level security;
 alter table public.compta_sources        enable row level security;
 alter table public.compta_rapprochements enable row level security;
+alter table public.compta_modes_paiement enable row level security;
 
 -- Accès par l'API pour les personnes connectées (les policies ci-dessous filtrent ensuite).
 grant select, insert, update, delete on
   public.compta_exercices, public.compta_comptes, public.compta_journaux, public.compta_evenements,
   public.compta_budgets, public.compta_ecritures, public.compta_lignes, public.compta_sources,
-  public.compta_rapprochements
+  public.compta_rapprochements, public.compta_modes_paiement
   to authenticated, service_role;
 grant select on
   public.compta_v_lignes, public.compta_v_balance, public.compta_v_budget_detail, public.compta_v_budgets
@@ -827,6 +881,8 @@ drop policy if exists compta_lecture on public.compta_lignes;
 create policy compta_lecture on public.compta_lignes for select to authenticated using ((select public.is_staff()));
 drop policy if exists compta_lecture on public.compta_sources;
 create policy compta_lecture on public.compta_sources for select to authenticated using ((select public.is_staff()));
+drop policy if exists compta_lecture on public.compta_modes_paiement;
+create policy compta_lecture on public.compta_modes_paiement for select to authenticated using ((select public.is_staff()));
 drop policy if exists compta_lecture on public.compta_rapprochements;
 create policy compta_lecture on public.compta_rapprochements for select to authenticated using ((select public.is_staff()));
 
@@ -851,6 +907,9 @@ create policy compta_ecriture_admin on public.compta_journaux for all to authent
 drop policy if exists compta_ecriture_admin on public.compta_exercices;
 create policy compta_ecriture_admin on public.compta_exercices for all to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
+drop policy if exists compta_ecriture_admin on public.compta_modes_paiement;
+create policy compta_ecriture_admin on public.compta_modes_paiement for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 drop policy if exists compta_ecriture_admin on public.compta_sources;
 create policy compta_ecriture_admin on public.compta_sources for all to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
@@ -861,7 +920,7 @@ create policy compta_ecriture_admin on public.compta_sources for all to authenti
 revoke all on function public.compta__exercice(date) from public, anon, authenticated;
 revoke all on function public.compta__ecrire(text, date, text, jsonb, text, text, uuid, text, text, text) from public, anon, authenticated;
 revoke all on function public.compta__evenement_site(uuid, uuid) from public, anon, authenticated;
-revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text) from public, anon, authenticated;
+revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text) from public, anon, authenticated;
 
 -- Fonctions du site : personnes connectées uniquement (le contrôle admin ou trésorière est dans la fonction).
 revoke all on function public.compta_saisir_ecriture(text, date, text, jsonb, text) from public, anon;

@@ -32,7 +32,7 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
       <div className="adm-h">
         <div>
           <h1>Trésorerie</h1>
-          <p>Consultation des réservations et recettes SumUp (lecture seule).</p>
+          <p>Consultation des réservations et des recettes : SumUp, espèces, chèques (lecture seule).</p>
         </div>
         <ExportCsv reservations={liste} evenements={evenements ?? []} />
       </div>
