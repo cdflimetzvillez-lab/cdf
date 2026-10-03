@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 import type { Mission } from '@/lib/tresors/types';
 
 export default async function AdminMissions() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const { data } = await supabase.from('tdn_missions').select('*').order('numero');
   const missions = (data ?? []) as Mission[];
   return (

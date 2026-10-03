@@ -2,36 +2,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { CATEGORIES, MODULES, moduleDuChemin } from '@/lib/bureau/modules';
+import './nav-admin.css';
 
-const LIENS_ADMIN = [
-  { href: '/admin', label: 'Tableau de bord' },
-  { href: '/admin/evenements', label: 'Événements' },
-  { href: '/admin/reservations', label: 'Réservations' },
-  { href: '/admin/tresorerie', label: 'Trésorerie' },
-  { href: '/admin/compta', label: 'Comptabilité' },
-  { href: '/admin/demandes', label: 'Demandes reçues' },
-  { href: '/admin/tresors', label: 'Trésors de Noël' },
-  { href: '/admin/pere-noel', label: '🎅 Père Noël vidéo' },
-  { href: '/admin/roue', label: '🎡 Roue de la Rentrée' },
-  { href: '/admin/partenaires', label: 'Partenaires' },
-  { href: '/admin/association', label: 'Association' },
-  { href: '/admin/theme', label: 'Thème de l\u2019accueil' },
-  { href: '/admin/parametres', label: 'Réglages du site' },
-  { href: '/admin/maintenance', label: 'Maintenance' },
-];
-
-const LIENS_TRESORIER = [
-  { href: '/admin/tresorerie', label: 'Trésorerie (lecture seule)' },
-  { href: '/admin/compta', label: 'Comptabilité' },
-];
-
-export default function NavAdmin({ role = 'admin' }: { role?: 'admin' | 'tresorier' }) {
+/** Menu de l'admin, rangé par catégories et limité aux modules accordés au membre connecté. */
+export default function NavAdmin({ modules }: { modules: string[] }) {
   const path = usePathname();
   const [ouvert, setOuvert] = useState(false);
   useEffect(() => { setOuvert(false); }, [path]);
-  const LIENS = role === 'tresorier' ? LIENS_TRESORIER : LIENS_ADMIN;
-  const estActif = (href: string) => (href === '/admin' ? path === '/admin' : path.startsWith(href));
-  const courant = LIENS.find((l) => estActif(l.href))?.label ?? 'Menu';
+
+  const liens = MODULES.filter((m) => modules.includes(m.cle));
+  const actif = moduleDuChemin(path);
+  const courant = liens.find((l) => l.cle === actif)?.libelle ?? 'Menu';
 
   return (
     <nav className={`adm-nav${ouvert ? ' ouvert' : ''}`}>
@@ -40,11 +22,20 @@ export default function NavAdmin({ role = 'admin' }: { role?: 'admin' | 'tresori
         <span aria-hidden="true">{ouvert ? '✕' : '☰'}</span>
       </button>
       <div className="adm-nav-liens">
-        {LIENS.map((l) => (
-          <Link key={l.href} href={l.href} className={estActif(l.href) ? 'on' : ''}>
-            {l.label}
-          </Link>
-        ))}
+        {CATEGORIES.map((c) => {
+          const groupe = liens.filter((l) => l.categorie === c.cle);
+          if (groupe.length === 0) return null;
+          return (
+            <div key={c.cle} className="adm-groupe">
+              {c.libelle && <div className="adm-cat">{c.libelle}</div>}
+              {groupe.map((l) => (
+                <Link key={l.chemin} href={l.chemin} className={l.cle === actif ? 'on' : ''}>
+                  {l.libelle}
+                </Link>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </nav>
   );

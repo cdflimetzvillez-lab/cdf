@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function TresorsLayout({ children }: { children: React.ReactNode }) {
   const r = await lireReglages();
   if (r.module_actif === false) {
-    const { isAdmin } = await requireAdmin();
+    const { isAdmin } = await requireAdmin('tresors');
     if (!isAdmin) {
       return (
         <div className="tdn">

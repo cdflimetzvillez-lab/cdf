@@ -6,7 +6,7 @@ import { lireReglages } from '@/lib/tresors/db';
 
 /** Écran grand format du tirage du grand trésor. Réservé aux administrateurs connectés. */
 export default async function PageTirage() {
-  const { user, isAdmin } = await requireAdmin();
+  const { user, isAdmin } = await requireAdmin('tresors');
   if (!user || !isAdmin) redirect('/admin/login');
   const db = createAdminClient();
   const [r, { data: cles }] = await Promise.all([

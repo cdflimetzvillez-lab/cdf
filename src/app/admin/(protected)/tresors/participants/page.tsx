@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 import TableParticipants from '@/components/tresors/TableParticipants';
 
 export default async function AdminParticipants() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const [{ data: parts }, { data: prog }, { data: cles }, { count: nbMissions }] = await Promise.all([
     supabase.from('tdn_participants').select('*, tdn_comptes(prenom, nom, email, telephone)').order('created_at', { ascending: false }),
     supabase.from('tdn_progressions').select('participant_id'),

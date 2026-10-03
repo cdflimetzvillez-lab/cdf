@@ -3,7 +3,7 @@ import GestionPartenaires from '@/components/GestionPartenaires';
 import type { Partenaire } from '@/lib/types';
 
 export default async function AdminPartenaires() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('partenaires');
   const { data } = await supabase.from('partenaires').select('*').order('position');
   return (
     <>

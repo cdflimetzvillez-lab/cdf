@@ -3,7 +3,7 @@ import LigneDemande from '@/components/LigneDemande';
 import type { Demande } from '@/lib/types';
 
 export default async function Demandes() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('demandes');
   const { data } = await supabase.from('demandes')
     .select('*').order('created_at', { ascending: false });
   const demandes = (data ?? []) as Demande[];

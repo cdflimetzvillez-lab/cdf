@@ -180,7 +180,7 @@ export async function reclamer(_prev: EtatRoue, fd: FormData): Promise<EtatRoue>
    ADMIN
    ========================================================= */
 async function admin() {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('roue');
   if (!isAdmin) throw new Error('Accès refusé.');
   return supabase;
 }

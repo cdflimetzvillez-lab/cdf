@@ -12,7 +12,7 @@ import BlocPostal from '@/components/pere-noel/BlocPostal';
 export const maxDuration = 60;
 
 export default async function AdminCommandePn({ params }: { params: Promise<{ id: string }> }) {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('pere-noel');
   if (!isAdmin) return null;
   const { id } = await params;
   let c = await commandeParId(id);

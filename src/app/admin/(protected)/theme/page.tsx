@@ -6,7 +6,7 @@ import GestionThemes from '@/components/theme/GestionThemes';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminTheme() {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('theme');
   if (!isAdmin) return <div className="panel"><h2>Accès réservé aux admins</h2></div>;
 
   const themes = await getThemes();

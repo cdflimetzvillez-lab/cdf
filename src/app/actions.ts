@@ -48,7 +48,7 @@ export async function envoyerDemande(_prev: ActionState, fd: FormData): Promise<
 
 /* ============ ADMIN : réglages du site ============ */
 export async function majReglages(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('parametres');
   if (!isAdmin) return { error: 'Accès refusé.' };
 
   const champs = ['hero_kicker','hero_titre_1','hero_titre_accent','hero_titre_2','hero_texte',
@@ -70,7 +70,7 @@ export async function majReglages(_prev: ActionState, fd: FormData): Promise<Act
 
 /* ============ ADMIN : chiffres clés ============ */
 export async function majStats(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('association');
   if (!isAdmin) return { error: 'Accès refusé.' };
 
   const valeurs = fd.getAll('stat_valeur').map(String);
@@ -91,7 +91,7 @@ export async function majStats(_prev: ActionState, fd: FormData): Promise<Action
 
 /* ============ ADMIN : événement ============ */
 export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('evenements');
   if (!isAdmin) return { error: 'Accès refusé.' };
 
   const id = String(fd.get('id') ?? '');
@@ -223,14 +223,14 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
 }
 
 export async function supprimerEvenement(id: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('evenements');
   if (!isAdmin) return;
   await supabase.from('evenements').delete().eq('id', id);
   revalidatePath('/'); revalidatePath('/admin/evenements');
 }
 
 export async function basculerPublication(id: string, publie: boolean) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('evenements');
   if (!isAdmin) return;
   await supabase.from('evenements').update({ publie }).eq('id', id);
   revalidatePath('/'); revalidatePath('/admin/evenements');
@@ -238,14 +238,14 @@ export async function basculerPublication(id: string, publie: boolean) {
 
 /* ============ ADMIN : demandes ============ */
 export async function changerStatutDemande(id: string, statut: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('demandes');
   if (!isAdmin) return;
   await supabase.from('demandes').update({ statut }).eq('id', id);
   revalidatePath('/admin/demandes');
 }
 
 export async function supprimerDemande(id: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('demandes');
   if (!isAdmin) return;
   await supabase.from('demandes').delete().eq('id', id);
   revalidatePath('/admin/demandes');
@@ -256,7 +256,7 @@ export async function supprimerDemande(id: string) {
    PARTENAIRES (logos sur l'accueil)
    ========================================================= */
 export async function enregistrerPartenaire(_prev: { ok?: string; erreur?: string } | null, fd: FormData) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('partenaires');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   const id = String(fd.get('id') ?? '');
   const data = {
@@ -275,7 +275,7 @@ export async function enregistrerPartenaire(_prev: { ok?: string; erreur?: strin
 }
 
 export async function supprimerPartenaire(id: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('partenaires');
   if (!isAdmin) return;
   await supabase.from('partenaires').delete().eq('id', id);
   revalidatePath('/'); revalidatePath('/admin/partenaires');

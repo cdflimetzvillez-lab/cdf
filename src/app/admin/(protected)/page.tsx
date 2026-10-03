@@ -4,12 +4,19 @@ import { dateLongue } from '@/lib/format';
 import type { Evenement, Demande } from '@/lib/types';
 
 export default async function Dashboard() {
-  const { supabase } = await requireAdmin();
+  const { supabase, modules } = await requireAdmin('tableau');
+  // Les demandes contiennent des coordonnées : elles ne s'affichent qu'aux membres qui gèrent ce module.
+  const voitDemandes = modules.includes('demandes');
+  const gereEvenements = modules.includes('evenements');
 
   const [{ data: evts }, { data: demandes }, { count: nouvelles }] = await Promise.all([
     supabase.from('evenements').select('*').order('date_debut'),
-    supabase.from('demandes').select('*').order('created_at', { ascending: false }).limit(6),
-    supabase.from('demandes').select('id', { count: 'exact', head: true }).eq('statut', 'nouveau'),
+    voitDemandes
+      ? supabase.from('demandes').select('*').order('created_at', { ascending: false }).limit(6)
+      : Promise.resolve({ data: [] as Demande[] }),
+    voitDemandes
+      ? supabase.from('demandes').select('id', { count: 'exact', head: true }).eq('statut', 'nouveau')
+      : Promise.resolve({ count: 0 }),
   ]);
 
   const evenements = (evts ?? []) as Evenement[];
@@ -24,16 +31,18 @@ export default async function Dashboard() {
           <h1>Tableau de bord</h1>
           <p>Vue d&apos;ensemble du site et des demandes reçues.</p>
         </div>
-        <Link className="btn btn-k btn-sm" href="/admin/evenements/nouveau">
-          + Nouvel événement
-        </Link>
+        {gereEvenements && (
+          <Link className="btn btn-k btn-sm" href="/admin/evenements/nouveau">
+            + Nouvel événement
+          </Link>
+        )}
       </div>
 
       <div className="kpi">
         <div><b>{evenements.length}</b><span>Événements</span></div>
         <div><b>{evenements.filter((e) => e.publie).length}</b><span>Publiés</span></div>
         <div><b>{aVenir.length}</b><span>À venir</span></div>
-        <div><b>{nouvelles ?? 0}</b><span>Demandes non traitées</span></div>
+        {voitDemandes && <div><b>{nouvelles ?? 0}</b><span>Demandes non traitées</span></div>}
       </div>
 
       {prochain && (
@@ -47,7 +56,7 @@ export default async function Dashboard() {
             {prochain.publie ? 'publié' : 'brouillon'}
           </p>
           <div style={{ marginTop: '1rem', display: 'flex', gap: '.6rem', flexWrap: 'wrap' }}>
-            <Link className="btn btn-y btn-sm" href={`/admin/evenements/${prochain.id}`}>Modifier</Link>
+            {gereEvenements && <Link className="btn btn-y btn-sm" href={`/admin/evenements/${prochain.id}`}>Modifier</Link>}
             <Link className="btn btn-w btn-sm" href={`/evenements/${prochain.slug}`} target="_blank">
               Voir la page
             </Link>
@@ -55,6 +64,7 @@ export default async function Dashboard() {
         </div>
       )}
 
+      {voitDemandes && (
       <div className="panel">
         <h2>Dernières demandes</h2>
         {(!demandes || demandes.length === 0) && (
@@ -83,6 +93,7 @@ export default async function Dashboard() {
           <Link className="btn btn-k btn-sm" href="/admin/demandes">Toutes les demandes</Link>
         </div>
       </div>
+      )}
     </>
   );
 }

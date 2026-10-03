@@ -7,7 +7,7 @@ export default async function PageEditeur(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('evenements');
 
   if (id === 'nouveau') {
     return (

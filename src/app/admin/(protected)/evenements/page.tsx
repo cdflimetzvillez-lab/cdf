@@ -5,7 +5,7 @@ import LigneEvenement from '@/components/LigneEvenement';
 import type { Evenement } from '@/lib/types';
 
 export default async function ListeEvenements() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('evenements');
   const { data } = await supabase.from('evenements').select('*').order('position');
   const evts = (data ?? []) as Evenement[];
 

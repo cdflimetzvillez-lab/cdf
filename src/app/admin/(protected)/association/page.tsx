@@ -4,7 +4,7 @@ import FormStats from '@/components/FormStats';
 import type { Stat } from '@/lib/types';
 
 export default async function Association() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('association');
   const { data } = await supabase.from('stats').select('*').order('position');
 
   return (

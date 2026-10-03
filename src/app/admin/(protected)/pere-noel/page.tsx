@@ -12,7 +12,7 @@ export const maxDuration = 60;
 const PILL: Record<string, string> = { a_faire: 'new', relecture: 'new', audio: 'on', video: 'on', terminee: 'done', erreur: 'off' };
 
 export default async function AdminPereNoel() {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('pere-noel');
   if (!isAdmin) return null;
   const [r, s, commandes, credits] = await Promise.all([lireReglagesPn(), lireStatsPn(), listerCommandes(), creditsHeygen()]);
   const pret = !!r.image_url && !!(r.voice_id || process.env.ELEVENLABS_VOICE_ID) && !!process.env.HEYGEN_API_KEY && !!process.env.ELEVENLABS_API_KEY && !!process.env.ANTHROPIC_API_KEY;

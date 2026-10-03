@@ -5,7 +5,7 @@ import { euros } from '@/lib/sumup';
 import type { Stats } from '@/lib/tresors/types';
 
 export default async function AdminTresors() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const [{ data: stats }, { data: reglages }, { count: nbMissions }, { count: nbLots }] = await Promise.all([
     supabase.from('tdn_stats').select('*').single(),
     supabase.from('tdn_reglages').select('*').eq('id', 1).single(),

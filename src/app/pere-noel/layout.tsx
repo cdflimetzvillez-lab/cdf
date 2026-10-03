@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PereNoelLayout({ children }: { children: React.ReactNode }) {
   const r = await lireReglagesPn();
   if (!r.module_actif) {
-    const { isAdmin } = await requireAdmin();
+    const { isAdmin } = await requireAdmin('pere-noel');
     if (!isAdmin) {
       return (
         <div className="pn">

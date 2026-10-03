@@ -3,7 +3,7 @@ import FormReglages from '@/components/FormReglages';
 import type { SiteSettings } from '@/lib/types';
 
 export default async function Parametres() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('parametres');
   const { data } = await supabase.from('site_settings').select('*').eq('id', 1).single();
 
   return (

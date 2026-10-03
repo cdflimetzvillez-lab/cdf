@@ -12,7 +12,7 @@ export default async function Reservations({
   searchParams,
 }: { searchParams: Promise<{ evt?: string }> }) {
   const { evt } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('reservations');
 
   // Tous les événements : un exposant peut être saisi sur un événement sans billetterie.
   const [{ data: evenements }, { data: suivi }, { data: tarifs }, { data: formules }] = await Promise.all([

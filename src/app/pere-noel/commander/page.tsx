@@ -4,7 +4,7 @@ import { lireReglagesPn } from '@/lib/pere-noel/db';
 import { requireAdmin } from '@/lib/supabase/server';
 
 export default async function PageCommander({ searchParams }: { searchParams: Promise<{ test?: string }> }) {
-  const [r, { isAdmin }, sp] = await Promise.all([lireReglagesPn(), requireAdmin(), searchParams]);
+  const [r, { isAdmin }, sp] = await Promise.all([lireReglagesPn(), requireAdmin('pere-noel'), searchParams]);
   const test = sp.test === '1' && isAdmin;
   if (!r.commandes_ouvertes && !test) {
     return (

@@ -309,7 +309,7 @@ export async function reveler(numero: string, code: string): Promise<{ lot?: Lot
    ADMIN
    ========================================================= */
 async function admin() {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('tresors');
   if (!isAdmin) throw new Error('Accès refusé.');
   return supabase;
 }

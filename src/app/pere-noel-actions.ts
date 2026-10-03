@@ -20,7 +20,7 @@ const txt = (fd: FormData, k: string, max = 1200) => String(fd.get(k) ?? '').tri
    ========================================================= */
 export async function commander(_prev: Etat, fd: FormData): Promise<Etat> {
   const r = await lireReglagesPn();
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('pere-noel');
   const modeTest = fd.get('test') === '1' && isAdmin;
   if (!r.commandes_ouvertes && !modeTest) return { erreur: 'Les commandes ne sont pas ouvertes pour le moment.' };
 
@@ -125,7 +125,7 @@ export async function rafraichirDepuisEspace(id: string) {
    ADMIN
    ========================================================= */
 async function admin() {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('pere-noel');
   if (!isAdmin) throw new Error('Accès refusé.');
 }
 const chemins = () => { revalidatePath('/admin/pere-noel', 'layout'); revalidatePath('/pere-noel', 'layout'); revalidatePath('/'); };

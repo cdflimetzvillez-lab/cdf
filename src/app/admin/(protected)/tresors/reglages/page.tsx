@@ -3,7 +3,7 @@ import FormReglagesTdn from '@/components/tresors/FormReglagesTdn';
 import type { Reglages } from '@/lib/tresors/types';
 
 export default async function AdminReglagesTdn() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const { data } = await supabase.from('tdn_reglages').select('*').eq('id', 1).single();
   return (
     <>

@@ -5,7 +5,7 @@ import type { Mission } from '@/lib/tresors/types';
 
 export default async function AdminMission({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   let mission: Mission | null = null;
   if (id !== 'nouvelle') {
     const { data } = await supabase.from('tdn_missions').select('*').eq('id', id).maybeSingle();

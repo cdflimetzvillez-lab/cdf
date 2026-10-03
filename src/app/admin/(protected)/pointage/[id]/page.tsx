@@ -10,7 +10,7 @@ export default async function Pointage(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('reservations');
 
   const { data: evt } = await supabase
     .from('evenements')

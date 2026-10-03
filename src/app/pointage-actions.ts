@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 
 /** Fixe le nombre de personnes arrivées sur une réservation. */
 export async function majArrivees(id: string, arrivees: number) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
 
   const { data: resa } = await supabase

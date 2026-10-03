@@ -3,7 +3,7 @@ import { lireReglagesPn } from '@/lib/pere-noel/db';
 import FormReglagesPn from '@/components/pere-noel/FormReglagesPn';
 
 export default async function AdminReglagesPn() {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('pere-noel');
   if (!isAdmin) return null;
   const r = await lireReglagesPn();
   const cles = {

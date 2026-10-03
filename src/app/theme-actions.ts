@@ -25,7 +25,7 @@ async function ecrire(themes: ThemeAccueil[]): Promise<string | null> {
 
 /** Ajoute un thème ou modifie celui dont l'identifiant est fourni. */
 export async function enregistrerTheme(_prev: EtatThemeForm, fd: FormData): Promise<EtatThemeForm> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('theme');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
 
   const texte = (cle: string, max: number) => String(fd.get(cle) ?? '').trim().slice(0, max);
@@ -66,7 +66,7 @@ export async function enregistrerTheme(_prev: EtatThemeForm, fd: FormData): Prom
 }
 
 export async function basculerTheme(id: string, actif: boolean): Promise<EtatThemeForm> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('theme');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   const themes = await getThemes();
   const erreur = await ecrire(themes.map((t) => (t.id === id ? { ...t, actif } : t)));
@@ -74,7 +74,7 @@ export async function basculerTheme(id: string, actif: boolean): Promise<EtatThe
 }
 
 export async function supprimerTheme(id: string): Promise<EtatThemeForm> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('theme');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   const themes = await getThemes();
   const erreur = await ecrire(themes.filter((t) => t.id !== id));

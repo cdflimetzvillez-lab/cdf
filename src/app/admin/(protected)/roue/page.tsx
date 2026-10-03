@@ -10,7 +10,7 @@ import type { LotRoue, ModuleAccueil, ParticipationRoue, StatsRoue } from '@/lib
 
 export default async function AdminRoue({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
   const { onglet = 'apercu' } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('roue');
   await purgerGainsAdmin();
   const [{ data: module }, { data: stats }, { data: lots }, { data: gagnants }, { data: attribs }] = await Promise.all([
     supabase.from('homepage_modules').select('*').eq('module_key', 'roue_rentree').maybeSingle(),

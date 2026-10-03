@@ -7,7 +7,7 @@ export type EtatMaintenance = { ok?: string; erreur?: string } | null;
 
 /** Active ou coupe le mode maintenance. */
 export async function basculerMaintenance(actif: boolean) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('maintenance');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
 
   const { error } = await supabase
@@ -28,7 +28,7 @@ export async function basculerMaintenance(actif: boolean) {
 export async function majTextesMaintenance(
   _prev: EtatMaintenance, fd: FormData
 ): Promise<EtatMaintenance> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('maintenance');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
 
   const titre = String(fd.get('maintenance_titre') ?? '').trim();

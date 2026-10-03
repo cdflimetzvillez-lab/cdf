@@ -4,7 +4,7 @@ import PanneauMaintenance from '@/components/PanneauMaintenance';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminMaintenance() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('maintenance');
   const { data } = await supabase
     .from('site_settings')
     .select('maintenance_active, maintenance_titre, maintenance_message, maintenance_retour, maintenance_depuis')

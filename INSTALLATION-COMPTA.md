@@ -35,3 +35,14 @@ même sans billetterie en ligne. Les formules (tailles d'emplacement, options) s
 événement par événement ; sans formule, l'emplacement est à prix libre. Un exposant compte pour une présence au pointage.
 En comptabilité, ses recettes vont au compte 706100, Emplacements exposants.
 Mise à jour de la base : réexécuter supabase/comptabilite.sql.
+
+
+## Accès du bureau
+
+Admin, « Accès du bureau » (administrateurs uniquement) : création des comptes des membres, poste de chacun,
+et grille des modules accordés à chaque poste. Le menu latéral n'affiche que les modules du membre connecté.
+Mise à jour de la base : exécuter supabase/bureau.sql. Tant que ce n'est pas fait, le site fonctionne comme avant
+(administrateurs et trésorières).
+
+Les accès sont vérifiés côté serveur, page par page et action par action. Les règles de la base restent
+réservées aux administrateurs, sauf la trésorerie et la comptabilité, ouvertes aux postes qui ont ces modules.

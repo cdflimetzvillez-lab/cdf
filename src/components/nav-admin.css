@@ -1,0 +1,13 @@
+/* Menu latéral de l'admin : catégories, liens plus serrés et défilement si le menu dépasse l'écran. */
+.adm-cat{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+  color:#8a8179;padding:.9rem .9rem .25rem;}
+.adm-groupe{display:flex;flex-direction:column;gap:.15rem;}
+.adm-side .adm-nav-liens a{padding:.5rem .9rem;}
+
+@media (min-width:901px){
+  .adm-side .adm-nav{flex:1;min-height:0;overflow-y:auto;margin-right:-.6rem;padding-right:.6rem;}
+  .adm-side .brand{margin-bottom:.9rem;}
+}
+@media (max-width:900px){
+  .adm-nav.ouvert .adm-nav-liens{max-height:65vh;overflow-y:auto;}
+}

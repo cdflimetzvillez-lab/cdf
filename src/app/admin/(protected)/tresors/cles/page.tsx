@@ -5,7 +5,7 @@ import TableCles from '@/components/tresors/TableCles';
 import type { Lot } from '@/lib/tresors/types';
 
 export default async function AdminCles() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const [{ data: cles }, { data: lots }, { data: reg }] = await Promise.all([
     supabase.from('tdn_cles').select('*, tdn_participants(prenom, tdn_comptes(prenom, nom)), tdn_lots(nom)').order('numero'),
     supabase.from('tdn_lots').select('*').order('position'),

@@ -3,7 +3,7 @@ import GestionLots from '@/components/tresors/GestionLots';
 import type { Lot, Partenaire } from '@/lib/tresors/types';
 
 export default async function AdminLots() {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireAdmin('tresors');
   const [{ data: lots }, { data: partenaires }, { data: attribs }] = await Promise.all([
     supabase.from('tdn_lots').select('*, tdn_partenaires(nom)').order('position'),
     supabase.from('tdn_partenaires').select('*').order('nom'),

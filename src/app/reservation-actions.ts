@@ -269,7 +269,7 @@ export async function envoyerBillet(resa: any, alerterComite = true) {
    ADMIN
    ========================================================= */
 export async function marquerScanne(id: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return;
   await supabase.from('reservations')
     .update({ scanne_le: new Date().toISOString() })
@@ -278,7 +278,7 @@ export async function marquerScanne(id: string) {
 }
 
 export async function changerStatutResa(id: string, statut: string): Promise<{ erreur?: string } | void> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return;
 
   const maj: Record<string, unknown> = { statut };
@@ -301,7 +301,7 @@ export async function changerStatutResa(id: string, statut: string): Promise<{ e
 }
 
 export async function supprimerReservation(id: string) {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return;
   await supabase.from('reservations').delete().eq('id', id);
   revalidatePath('/admin/reservations');
@@ -309,7 +309,7 @@ export async function supprimerReservation(id: string) {
 
 /** Admin : force une vérification auprès de SumUp pour une réservation (ou toutes celles en attente). */
 export async function verifierSumUpAdmin(reference?: string): Promise<{ verifiees: number; changees: number; erreur?: string }> {
-  const { supabase, isAdmin } = await requireAdmin();
+  const { supabase, isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return { verifiees: 0, changees: 0, erreur: 'Accès refusé.' };
   let refs: string[] = [];
   if (reference) refs = [reference];
@@ -354,7 +354,7 @@ function erreurBase(message: string): string {
  * payé en espèces, par chèque, ou pas encore payé.
  */
 export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData): Promise<EtatManuel> {
-  const { supabase, isAdmin, user } = await requireAdmin();
+  const { supabase, isAdmin, user } = await requireAdmin('reservations');
   if (!isAdmin || !user) return { erreur: 'Accès refusé.' };
 
   const evenementId = String(fd.get('evenement_id') ?? '');
@@ -464,7 +464,7 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
 
 /** Enregistre le paiement en espèces ou par chèque d'une réservation non payée. */
 export async function encaisserReservation(id: string, mode: string, ref?: string): Promise<{ ok?: boolean; erreur?: string }> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   if (!MODES_HORS_LIGNE.includes(mode)) return { erreur: 'Mode de paiement invalide.' };
 
@@ -497,7 +497,7 @@ export async function encaisserReservation(id: string, mode: string, ref?: strin
    ADMIN — formules proposées aux exposants d'un événement
    ========================================================= */
 export async function ajouterFormuleExposant(evenementId: string, libelle: string, prix: string): Promise<{ ok?: boolean; erreur?: string }> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   const nom = libelle.trim();
   const prixCentimes = centimes(prix.trim() || '0');
@@ -524,7 +524,7 @@ export async function ajouterFormuleExposant(evenementId: string, libelle: strin
 
 /** Retire une formule. Les réservations déjà saisies gardent leur détail. */
 export async function supprimerFormuleExposant(id: string): Promise<{ ok?: boolean; erreur?: string }> {
-  const { isAdmin } = await requireAdmin();
+  const { isAdmin } = await requireAdmin('reservations');
   if (!isAdmin) return { erreur: 'Accès refusé.' };
   const { error } = await createAdminClient().from('formules_exposants').delete().eq('id', id);
   if (error) return { erreur: error.message };
