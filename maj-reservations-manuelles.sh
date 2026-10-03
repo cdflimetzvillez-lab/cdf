@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Réservations saisies à la main (espèces, chèque) et prise en compte en comptabilité.
+# Réservations saisies à la main (participants et exposants, espèces ou chèque) et prise en compte en comptabilité.
 # À exécuter à la racine du projet :  bash maj-reservations-manuelles.sh
 set -euo pipefail
 if [ ! -f package.json ] || [ ! -d src/app ]; then
@@ -8,7 +8,7 @@ fi
 if [ ! -d "src/app/admin/(protected)/compta" ]; then
   echo "Le module comptabilité est introuvable : lance d'abord bash install-compta.sh"; exit 1
 fi
-echo "Mise à jour : réservations manuelles…"
+echo "Mise à jour : réservations manuelles et exposants…"
 cat > 'INSTALLATION-COMPTA.md' <<'EOF_RESA_FICHIER'
 # Module comptabilité : installation
 
@@ -39,6 +39,14 @@ enregistre le paiement plus tard. Mise à jour de la base : réexécuter supabas
 En comptabilité, les espèces vont en caisse (530000, journal CA) et les chèques en chèques à encaisser
 (511200, journal CH), sans frais de paiement. Quand les chèques sont déposés à la banque :
 Saisie, virement interne, de 511200 vers 512000. Idem pour un dépôt d'espèces, de 530000 vers 512000.
+
+## Exposants (marché de Noël et autres)
+
+Admin, Réservations, « + Ajouter un participant ou un exposant », onglet Exposant. Tous les événements sont proposés,
+même sans billetterie en ligne. Les formules (tailles d'emplacement, options) se créent en bas du même panneau,
+événement par événement ; sans formule, l'emplacement est à prix libre. Un exposant compte pour une présence au pointage.
+En comptabilité, ses recettes vont au compte 706100, Emplacements exposants.
+Mise à jour de la base : réexécuter supabase/comptabilite.sql.
 EOF_RESA_FICHIER
 echo "  ✓ INSTALLATION-COMPTA.md"
 mkdir -p 'supabase'
@@ -70,6 +78,8 @@ alter table public.reservations add column if not exists mode_paiement text;
 alter table public.reservations add column if not exists paiement_ref text;
 alter table public.reservations add column if not exists saisie_par text;
 alter table public.reservations alter column email drop not null;
+-- Réservation d'un exposant (stand), saisie par un admin.
+alter table public.reservations add column if not exists exposant boolean not null default false;
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'reservations_mode_paiement_check') then
@@ -77,6 +87,25 @@ begin
       add constraint reservations_mode_paiement_check check (mode_paiement in ('especes', 'cheque'));
   end if;
 end $$;
+
+
+-- Formules proposées aux exposants d'un événement (tailles d'emplacement, options).
+create table if not exists public.formules_exposants (
+  id             uuid primary key default gen_random_uuid(),
+  evenement_id   uuid not null references public.evenements(id) on delete cascade,
+  libelle        text not null,
+  prix_centimes  integer not null check (prix_centimes >= 0),
+  position       integer not null default 0,
+  created_at     timestamptz not null default now()
+);
+alter table public.formules_exposants enable row level security;
+grant select, insert, update, delete on public.formules_exposants to authenticated, service_role;
+drop policy if exists formules_exposants_lecture on public.formules_exposants;
+create policy formules_exposants_lecture on public.formules_exposants for select to authenticated
+  using ((select public.is_staff()));
+drop policy if exists formules_exposants_ecriture on public.formules_exposants;
+create policy formules_exposants_ecriture on public.formules_exposants for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 
 -- =====================================================================
@@ -229,6 +258,7 @@ insert into public.compta_comptes (numero, intitule, type) values
   ('627800', 'Frais de paiement en ligne', 'charge'),
   ('651600', 'Droits d''auteur (SACEM)', 'charge'),
   ('706000', 'Billetterie des manifestations', 'produit'),
+  ('706100', 'Emplacements exposants', 'produit'),
   ('706200', 'Vidéos du Père Noël', 'produit'),
   ('707000', 'Buvette et restauration', 'produit'),
   ('708800', 'Tombolas et jeux', 'produit'),
@@ -447,7 +477,9 @@ end $$;
 
 -- Écriture d'une vente du site : recette au brut, frais de paiement en charge si un taux est réglé.
 -- p_mode (especes, cheque) : encaissement hors ligne, sur le compte du mode et sans frais.
+-- p_compte_produit : compte de produit particulier (exposants), sinon celui de la source.
 drop function if exists public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text);
+drop function if exists public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text);
 
 create or replace function public.compta__ecrire_vente(
   p_cle text,
@@ -457,7 +489,8 @@ create or replace function public.compta__ecrire_vente(
   p_montant integer,
   p_evenement uuid,
   p_statut text,
-  p_mode text default null
+  p_mode text default null,
+  p_compte_produit text default null
 )
 returns boolean
 language plpgsql security definer set search_path = public
@@ -467,6 +500,7 @@ declare
   m compta_modes_paiement%rowtype;
   v_journal text;
   v_tresorerie text;
+  v_produit text;
   v_libelle text := p_libelle;
   v_hors_ligne boolean := false;
   v_frais integer := 0;
@@ -486,6 +520,11 @@ begin
   v_evt := coalesce(p_evenement, s.compta_evenement_id);
   v_journal := s.journal_code;
   v_tresorerie := s.compte_tresorerie;
+  v_produit := s.compte_produit;
+  if p_compte_produit is not null
+     and exists (select 1 from compta_comptes where numero = p_compte_produit and actif) then
+    v_produit := p_compte_produit;
+  end if;
 
   if p_mode is not null then
     select * into m from compta_modes_paiement where mode = p_mode;
@@ -503,7 +542,7 @@ begin
 
   v_lignes := jsonb_build_array(
     jsonb_build_object('compte', v_tresorerie, 'debit', p_montant, 'credit', 0),
-    jsonb_build_object('compte', s.compte_produit, 'debit', 0, 'credit', p_montant, 'evenement_id', v_evt)
+    jsonb_build_object('compte', v_produit, 'debit', 0, 'credit', p_montant, 'evenement_id', v_evt)
   );
   if v_frais > 0 then
     v_lignes := v_lignes || jsonb_build_array(
@@ -619,7 +658,7 @@ begin
   if found and s.actif then
     for r in
       select res.id, res.reference, res.montant_centimes, res.paye_le, res.statut, res.evenement_id, res.places,
-             res.mode_paiement, coalesce(ev.titre, 'Billetterie') as titre
+             res.mode_paiement, res.exposant, coalesce(ev.titre, 'Billetterie') as titre
       from reservations res
       left join evenements ev on ev.id = res.evenement_id
       where res.paye_le is not null
@@ -631,8 +670,11 @@ begin
     loop
       if compta__ecrire_vente(
            'reservations', r.id, (r.paye_le at time zone 'Europe/Paris')::date,
-           r.titre || ', ' || coalesce(r.places, 1) || ' place(s)' || coalesce(', réf. ' || r.reference, ''),
-           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut, r.mode_paiement) then
+           r.titre
+             || case when r.exposant then ', exposant' else ', ' || coalesce(r.places, 1) || ' place(s)' end
+             || coalesce(', réf. ' || r.reference, ''),
+           r.montant_centimes, compta__evenement_site(r.evenement_id, null), r.statut, r.mode_paiement,
+           case when r.exposant then '706100' end) then
         v_n := v_n + 1;
       end if;
     end loop;
@@ -965,7 +1007,7 @@ create policy compta_ecriture_admin on public.compta_sources for all to authenti
 revoke all on function public.compta__exercice(date) from public, anon, authenticated;
 revoke all on function public.compta__ecrire(text, date, text, jsonb, text, text, uuid, text, text, text) from public, anon, authenticated;
 revoke all on function public.compta__evenement_site(uuid, uuid) from public, anon, authenticated;
-revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.compta__ecrire_vente(text, uuid, date, text, integer, uuid, text, text, text) from public, anon, authenticated;
 
 -- Fonctions du site : personnes connectées uniquement (le contrôle admin ou trésorière est dans la fonction).
 revoke all on function public.compta_saisir_ecriture(text, date, text, jsonb, text) from public, anon;
@@ -1119,6 +1161,8 @@ export interface Reservation {
   paiement_ref: string | null;
   /** Nom de l'admin pour une réservation saisie à la main. */
   saisie_par: string | null;
+  /** Réservation d'un exposant (formules d'emplacement) plutôt que d'un participant. */
+  exposant: boolean;
 }
 
 export type Partenaire = {
@@ -1479,12 +1523,15 @@ function centimes(saisie: string): number | null {
 
 /** Explique l'erreur quand les colonnes de paiement n'ont pas encore été créées. */
 function erreurBase(message: string): string {
-  return /mode_paiement|paiement_ref|saisie_par/.test(message)
+  return /mode_paiement|paiement_ref|saisie_par|exposant/.test(message)
     ? 'La base n\u2019est pas à jour : exécute supabase/comptabilite.sql dans Supabase, puis réessaie.'
     : message;
 }
 
-/** Ajoute un participant depuis l'admin, payé en espèces, par chèque, ou pas encore payé. */
+/**
+ * Ajoute un participant ou un exposant depuis l'admin,
+ * payé en espèces, par chèque, ou pas encore payé.
+ */
 export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData): Promise<EtatManuel> {
   const { supabase, isAdmin, user } = await requireAdmin();
   if (!isAdmin || !user) return { erreur: 'Accès refusé.' };
@@ -1494,16 +1541,20 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
   const email       = String(fd.get('email') ?? '').trim().toLowerCase();
   const telephone   = String(fd.get('telephone') ?? '').trim();
   const commentaire = String(fd.get('commentaire') ?? '').trim();
+  const exposant    = fd.get('type') === 'exposant';
   const paiement    = String(fd.get('paiement') ?? 'attente'); // especes | cheque | attente
   const paiementRef = String(fd.get('paiement_ref') ?? '').trim();
   const montantTxt  = String(fd.get('montant') ?? '').trim();
   const tarifIds    = fd.getAll('tarif_id').map(String);
   const tarifQtes   = fd.getAll('tarif_qte').map((v) => Math.max(0, Math.floor(Number(v) || 0)));
-  const places      = tarifQtes.reduce((s, q) => s + q, 0);
+  const quantite    = tarifQtes.reduce((s, q) => s + q, 0);
+  // Un exposant compte pour une seule présence au pointage, quelles que soient ses formules.
+  const places      = exposant ? 1 : quantite;
+  const rien        = exposant ? 'Choisis au moins une formule.' : 'Indique au moins une place.';
 
   if (nom.length < 2) return { erreur: 'Le nom est obligatoire.' };
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse e-mail invalide.' };
-  if (places < 1) return { erreur: 'Indique au moins une place.' };
+  if (quantite < 1) return { erreur: rien };
   if (paiement !== 'attente' && !MODES_HORS_LIGNE.includes(paiement)) return { erreur: 'Mode de paiement invalide.' };
 
   const db = createAdminClient();
@@ -1512,8 +1563,8 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
     .from('evenements').select('id, titre, prix_centimes, places_max').eq('id', evenementId).maybeSingle();
   if (!evt) return { erreur: 'Événement introuvable.' };
 
-  // Jauge : bloquante, sauf dépassement demandé explicitement.
-  if (evt.places_max !== null && fd.get('depasser') !== 'on') {
+  // Jauge : bloquante, sauf dépassement demandé explicitement. Elle ne concerne pas les exposants.
+  if (!exposant && evt.places_max !== null && fd.get('depasser') !== 'on') {
     const { data: restantes } = await db.rpc('places_restantes', { evt_id: evt.id });
     if (typeof restantes === 'number' && restantes < places) {
       return {
@@ -1522,18 +1573,23 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
     }
   }
 
-  const { data: grille } = await db.from('tarifs').select('id, libelle, prix_centimes').eq('evenement_id', evt.id);
+  // Participants : grille de tarifs de l'événement. Exposants : formules exposants.
+  const { data: grille } = await db
+    .from(exposant ? 'formules_exposants' : 'tarifs')
+    .select('id, libelle, prix_centimes')
+    .eq('evenement_id', evt.id);
   const lignes: { libelle: string; prix_centimes: number; quantite: number }[] = [];
   let montant = 0;
   tarifIds.forEach((id, i) => {
     const q = tarifQtes[i] ?? 0;
     if (q <= 0) return;
     const t = (grille ?? []).find((x) => x.id === id);
-    const prix = t ? t.prix_centimes : evt.prix_centimes ?? 0;
-    lignes.push({ libelle: t?.libelle ?? 'Place', prix_centimes: prix, quantite: q });
+    // Sans grille : prix unique de l'événement, ou emplacement à prix libre pour un exposant.
+    const prix = t ? t.prix_centimes : exposant ? 0 : evt.prix_centimes ?? 0;
+    lignes.push({ libelle: t?.libelle ?? (exposant ? 'Emplacement' : 'Place'), prix_centimes: prix, quantite: q });
     montant += prix * q;
   });
-  if (lignes.length === 0) return { erreur: 'Indique au moins une place.' };
+  if (lignes.length === 0) return { erreur: rien };
 
   // Montant encaissé : celui du formulaire s'il a été modifié (tarif spécial, invitation à 0).
   if (montantTxt !== '') {
@@ -1561,6 +1617,8 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
       mode_paiement: paye ? paiement : null,
       paiement_ref: paye && paiementRef ? paiementRef : null,
       saisie_par: moi?.nom ?? user.email ?? 'Admin',
+      // La colonne n'est envoyée que pour un exposant : les participants ne dépendent pas d'elle.
+      ...(exposant ? { exposant: true } : {}),
     })
     .select(CHAMPS_EVT)
     .single();
@@ -1572,12 +1630,14 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
 
   await db.from('reservation_lignes').insert(lignes.map((l) => ({ reservation_id: resa.id, ...l })));
 
-  if (paye && email && fd.get('envoyer_billet') === 'on') await envoyerBillet(resa, false);
+  // Le billet d'entrée n'a pas de sens pour un exposant.
+  if (!exposant && paye && email && fd.get('envoyer_billet') === 'on') await envoyerBillet(resa, false);
 
   revalidatePath('/admin/reservations');
   revalidatePath('/admin/tresorerie');
+  const quoi = exposant ? 'exposant ajouté' : `ajouté, ${places} place${places > 1 ? 's' : ''}`;
   return {
-    ok: `${nom} ajouté, ${places} place${places > 1 ? 's' : ''}, code billet ${resa.code_billet}. ${paye ? 'Paiement enregistré.' : 'Paiement en attente.'}`,
+    ok: `${nom} : ${quoi}, code ${resa.code_billet}. ${paye ? 'Paiement enregistré.' : 'Paiement en attente.'}`,
   };
 }
 
@@ -1605,10 +1665,49 @@ export async function encaisserReservation(id: string, mode: string, ref?: strin
     .single();
   if (error) return { erreur: erreurBase(error.message) };
 
-  if (maj?.email) await envoyerBillet(maj, false);
+  if (maj?.email && !maj.exposant) await envoyerBillet(maj, false);
 
   revalidatePath('/admin/reservations');
   revalidatePath('/admin/tresorerie');
+  return { ok: true };
+}
+
+/* =========================================================
+   ADMIN — formules proposées aux exposants d'un événement
+   ========================================================= */
+export async function ajouterFormuleExposant(evenementId: string, libelle: string, prix: string): Promise<{ ok?: boolean; erreur?: string }> {
+  const { isAdmin } = await requireAdmin();
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+  const nom = libelle.trim();
+  const prixCentimes = centimes(prix.trim() || '0');
+  if (!evenementId) return { erreur: 'Choisis un événement.' };
+  if (nom.length < 2) return { erreur: 'Le libellé de la formule est obligatoire.' };
+  if (prixCentimes === null) return { erreur: 'Prix invalide.' };
+
+  const db = createAdminClient();
+  const { count } = await db
+    .from('formules_exposants').select('id', { count: 'exact', head: true }).eq('evenement_id', evenementId);
+  const { error } = await db.from('formules_exposants').insert({
+    evenement_id: evenementId, libelle: nom, prix_centimes: prixCentimes, position: (count ?? 0) + 1,
+  });
+  if (error) {
+    return {
+      erreur: /formules_exposants/.test(error.message)
+        ? 'La base n\u2019est pas à jour : exécute supabase/comptabilite.sql dans Supabase, puis réessaie.'
+        : error.message,
+    };
+  }
+  revalidatePath('/admin/reservations');
+  return { ok: true };
+}
+
+/** Retire une formule. Les réservations déjà saisies gardent leur détail. */
+export async function supprimerFormuleExposant(id: string): Promise<{ ok?: boolean; erreur?: string }> {
+  const { isAdmin } = await requireAdmin();
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+  const { error } = await createAdminClient().from('formules_exposants').delete().eq('id', id);
+  if (error) return { erreur: error.message };
+  revalidatePath('/admin/reservations');
   return { ok: true };
 }
 EOF_RESA_FICHIER
@@ -1631,13 +1730,30 @@ export default async function Reservations({
   const { evt } = await searchParams;
   const { supabase } = await requireAdmin();
 
-  const [{ data: evenements }, { data: suivi }, { data: tarifs }] = await Promise.all([
+  // Tous les événements : un exposant peut être saisi sur un événement sans billetterie.
+  const [{ data: evenements }, { data: suivi }, { data: tarifs }, { data: formules }] = await Promise.all([
     supabase.from('evenements')
-      .select('id, titre, slug, places_max, prix_centimes')
-      .eq('billetterie_active', true).order('date_debut'),
+      .select('id, titre, slug, places_max, prix_centimes, billetterie_active')
+      .order('date_debut'),
     supabase.from('suivi_billetterie').select('*'),
     supabase.from('tarifs').select('id, evenement_id, libelle, prix_centimes').order('position'),
+    supabase.from('formules_exposants').select('id, evenement_id, libelle, prix_centimes').order('position'),
   ]);
+
+  // Synthèse des exposants par événement (les événements sans billetterie n'ont pas de ligne de suivi).
+  const { data: resasExposants } = await supabase
+    .from('reservations').select('evenement_id, montant_centimes, statut').eq('exposant', true);
+  const parExposant = (evenements ?? [])
+    .map((e) => {
+      const rs = (resasExposants ?? []).filter((r) => r.evenement_id === e.id);
+      const payes = rs.filter((r) => r.statut === 'payee');
+      return {
+        id: e.id, titre: e.titre, total: rs.length, payes: payes.length,
+        recette: payes.reduce((s, r) => s + r.montant_centimes, 0),
+        attente: rs.filter((r) => r.statut === 'en_attente').length,
+      };
+    })
+    .filter((e) => e.total > 0);
 
   let requete = supabase
     .from('reservations')
@@ -1649,6 +1765,7 @@ export default async function Reservations({
   const liste = resas ?? [];
 
   const payees = liste.filter((r) => r.statut === 'payee');
+  const exposants = liste.filter((r) => r.exposant);
   const recette = payees.reduce((s, r) => s + r.montant_centimes, 0);
   const placesVendues = payees.reduce((s, r) => s + r.places, 0);
 
@@ -1665,13 +1782,18 @@ export default async function Reservations({
         </div>
       </div>
 
-      <FormReservationManuelle evenements={evenements ?? []} tarifs={tarifs ?? []} evenementInitial={evt} />
+      <FormReservationManuelle
+        evenements={evenements ?? []} tarifs={tarifs ?? []} formules={formules ?? []} evenementInitial={evt}
+      />
 
       <div className="kpi">
         <div><b>{placesVendues}</b><span>Places vendues</span></div>
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
         <div><b>{payees.length}</b><span>Réservations payées</span></div>
         <div><b>{liste.filter((r) => r.statut === 'en_attente').length}</b><span>En attente</span></div>
+        {exposants.length > 0 && (
+          <div><b>{exposants.length}</b><span>Exposants</span></div>
+        )}
       </div>
 
       {(suivi ?? []).length > 0 && (
@@ -1716,6 +1838,32 @@ export default async function Reservations({
         </div>
       )}
 
+      {parExposant.length > 0 && (
+        <div className="panel">
+          <h2>Exposants par événement</h2>
+          <table className="tbl cartes compact">
+            <thead>
+              <tr><th>Événement</th><th>Exposants</th><th>Payés</th><th>En attente</th><th>Recette</th><th></th></tr>
+            </thead>
+            <tbody>
+              {parExposant.map((e) => (
+                <tr key={e.id}>
+                  <td data-l="Événement" className="bloc"><strong>{e.titre}</strong></td>
+                  <td data-l="Exposants">{e.total}</td>
+                  <td data-l="Payés">{e.payes}</td>
+                  <td data-l="En attente">{e.attente}</td>
+                  <td data-l="Recette">{euros(e.recette)}</td>
+                  <td className="actions">
+                    <Link className="btn btn-y btn-sm" href={`/admin/pointage/${e.id}`}>Pointer</Link>{' '}
+                    <Link className="btn btn-w btn-sm" href={`/admin/reservations?evt=${e.id}`}>Détail</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <div className="panel">
         <h2>
           {evt
@@ -1746,7 +1894,7 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
   const { supabase } = await requireAdmin();
 
   const [{ data: evenements }, { data: suivi }] = await Promise.all([
-    supabase.from('evenements').select('id, titre, slug, places_max, prix_centimes').eq('billetterie_active', true).order('date_debut'),
+    supabase.from('evenements').select('id, titre, slug, places_max, prix_centimes').order('date_debut'),
     supabase.from('suivi_billetterie').select('*'),
   ]);
 
@@ -1971,6 +2119,7 @@ export default async function Ventes({ searchParams }: { searchParams: Promise<{
             Réservation payée en espèces ou par chèque : encaissée en caisse (530000) ou en chèques à encaisser (511200), sans frais.
             La remise des chèques en banque se saisit en virement interne, de 511200 vers 512000.
           </li>
+          <li>Réservation d&apos;un exposant : portée au compte 706100, Emplacements exposants, au lieu de la billetterie.</li>
         </ul>
       </div>
 
@@ -2002,48 +2151,69 @@ echo "  ✓ src/app/admin/(protected)/compta/ventes/page.tsx"
 mkdir -p 'src/components'
 cat > 'src/components/FormReservationManuelle.tsx' <<'EOF_RESA_FICHIER'
 'use client';
-import { useActionState, useEffect, useMemo, useState } from 'react';
-import { ajouterReservationManuelle, type EtatManuel } from '@/app/reservation-actions';
+import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  ajouterReservationManuelle, ajouterFormuleExposant, supprimerFormuleExposant, type EtatManuel,
+} from '@/app/reservation-actions';
 
-type Evt = { id: string; titre: string; prix_centimes: number | null; places_max: number | null };
+type Evt = { id: string; titre: string; prix_centimes: number | null; places_max: number | null; billetterie_active: boolean | null };
 type Tarif = { id: string; evenement_id: string; libelle: string; prix_centimes: number };
+type TypeSaisie = 'participant' | 'exposant';
 
 const euros = (c: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
 const enSaisie = (c: number) => (c / 100).toFixed(2).replace('.', ',');
+const champ = { padding: '.5rem', border: '2px solid var(--noir)', fontFamily: 'inherit' } as const;
 
-/** Ajout d'un participant par un admin : paiement en espèces, par chèque ou à venir. */
+/**
+ * Ajout par un admin d'un participant (billetterie) ou d'un exposant (formules d'emplacement),
+ * avec paiement en espèces, par chèque ou à venir.
+ */
 export default function FormReservationManuelle({
-  evenements, tarifs, evenementInitial,
-}: { evenements: Evt[]; tarifs: Tarif[]; evenementInitial?: string }) {
+  evenements, tarifs, formules, evenementInitial,
+}: { evenements: Evt[]; tarifs: Tarif[]; formules: Tarif[]; evenementInitial?: string }) {
   const [ouvert, setOuvert] = useState(false);
-  const [evenementId, setEvenementId] = useState(
-    evenements.some((e) => e.id === evenementInitial) ? evenementInitial! : evenements[0]?.id ?? ''
-  );
+  const [type, setType] = useState<TypeSaisie>('participant');
+  const [evenementId, setEvenementId] = useState('');
   const [qtes, setQtes] = useState<Record<string, number>>({});
   const [montantSaisi, setMontantSaisi] = useState<string | null>(null);
   const [paiement, setPaiement] = useState('especes');
   const [etat, action, pending] = useActionState<EtatManuel, FormData>(ajouterReservationManuelle, null);
 
-  const evt = evenements.find((e) => e.id === evenementId);
-  // Sans grille de tarifs, une seule ligne au prix de l'événement.
+  // Gestion des formules exposants
+  const [nouveauLibelle, setNouveauLibelle] = useState('');
+  const [nouveauPrix, setNouveauPrix] = useState('');
+  const [erreurFormule, setErreurFormule] = useState('');
+  const [enCours, start] = useTransition();
+
+  const exposant = type === 'exposant';
+  // Participants : événements avec billetterie. Exposants : tous les événements.
+  const choix = useMemo(
+    () => (exposant ? evenements : evenements.filter((e) => e.billetterie_active)),
+    [evenements, exposant]
+  );
+  const evt =
+    choix.find((e) => e.id === evenementId) ??
+    choix.find((e) => e.id === evenementInitial) ??
+    (exposant ? choix.find((e) => /march/i.test(e.titre)) : undefined) ??
+    choix[0];
+
   const lignes = useMemo(() => {
-    const grille = tarifs.filter((t) => t.evenement_id === evenementId);
-    return grille.length > 0
-      ? grille.map((t) => ({ id: t.id, libelle: t.libelle, prix: t.prix_centimes }))
-      : [{ id: 'defaut', libelle: 'Place', prix: evt?.prix_centimes ?? 0 }];
-  }, [tarifs, evenementId, evt]);
+    if (!evt) return [];
+    const grille = (exposant ? formules : tarifs).filter((t) => t.evenement_id === evt.id);
+    if (grille.length > 0) return grille.map((t) => ({ id: t.id, libelle: t.libelle, prix: t.prix_centimes }));
+    // Sans grille : prix unique de l'événement, ou emplacement à prix libre pour un exposant.
+    return [{ id: 'defaut', libelle: exposant ? 'Emplacement' : 'Place', prix: exposant ? 0 : evt.prix_centimes ?? 0 }];
+  }, [tarifs, formules, evt, exposant]);
+  const formulesEvt = exposant && evt ? formules.filter((f) => f.evenement_id === evt.id) : [];
 
   const total = lignes.reduce((s, l) => s + l.prix * (qtes[l.id] ?? 0), 0);
-  const places = lignes.reduce((s, l) => s + (qtes[l.id] ?? 0), 0);
+  const quantite = lignes.reduce((s, l) => s + (qtes[l.id] ?? 0), 0);
 
-  // Après un ajout réussi : on repart d'un formulaire vide, sur le même événement.
-  useEffect(() => {
-    if (etat?.ok) {
-      setQtes({});
-      setMontantSaisi(null);
-    }
-  }, [etat]);
+  const vider = () => { setQtes({}); setMontantSaisi(null); };
+
+  // Après un ajout réussi : formulaire vide, même événement.
+  useEffect(() => { if (etat?.ok) vider(); }, [etat]);
 
   if (evenements.length === 0) return null;
 
@@ -2052,7 +2222,7 @@ export default function FormReservationManuelle({
       <div style={{ marginBottom: '1.6rem' }}>
         {etat?.ok && <div className="msg ok">{etat.ok}</div>}
         <button type="button" className="btn btn-k btn-sm" onClick={() => setOuvert(true)}>
-          + Ajouter un participant
+          + Ajouter un participant ou un exposant
         </button>
       </div>
     );
@@ -2060,121 +2230,183 @@ export default function FormReservationManuelle({
 
   return (
     <div className="panel">
-      <h2>Ajouter un participant</h2>
+      <h2>{exposant ? 'Ajouter un exposant' : 'Ajouter un participant'}</h2>
       {etat?.ok && <div className="msg ok">{etat.ok}</div>}
       {etat?.erreur && <div className="msg ko">{etat.erreur}</div>}
 
-      <form action={action}>
-        <div className="field">
-          <label htmlFor="rm-evt">Événement</label>
-          <select
-            id="rm-evt" name="evenement_id" value={evenementId}
-            onChange={(e) => { setEvenementId(e.target.value); setQtes({}); setMontantSaisi(null); }}
-          >
-            {evenements.map((e) => <option key={e.id} value={e.id}>{e.titre}</option>)}
-          </select>
-        </div>
+      <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.1rem' }}>
+        <button type="button" className={`btn btn-sm ${exposant ? 'btn-w' : 'btn-k'}`}
+          onClick={() => { setType('participant'); setEvenementId(''); vider(); }}>
+          Participant
+        </button>
+        <button type="button" className={`btn btn-sm ${exposant ? 'btn-k' : 'btn-w'}`}
+          onClick={() => { setType('exposant'); setEvenementId(''); vider(); }}>
+          Exposant
+        </button>
+      </div>
 
-        <div className="row3">
+      {!evt ? (
+        <p style={{ color: '#6b6560', marginBottom: '1rem' }}>
+          Aucun événement avec billetterie activée. Pour un exposant, choisis « Exposant ».
+        </p>
+      ) : (
+        <form action={action}>
+          <input type="hidden" name="type" value={type} />
           <div className="field">
-            <label htmlFor="rm-nom">Nom et prénom</label>
-            <input id="rm-nom" name="nom" required minLength={2} autoComplete="off" />
+            <label htmlFor="rm-evt">Événement</label>
+            <select id="rm-evt" name="evenement_id" value={evt.id}
+              onChange={(e) => { setEvenementId(e.target.value); vider(); }}>
+              {choix.map((e) => <option key={e.id} value={e.id}>{e.titre}</option>)}
+            </select>
           </div>
-          <div className="field">
-            <label htmlFor="rm-tel">Téléphone (facultatif)</label>
-            <input id="rm-tel" name="telephone" type="tel" autoComplete="off" />
-          </div>
-          <div className="field">
-            <label htmlFor="rm-email">E-mail (facultatif)</label>
-            <input id="rm-email" name="email" type="email" autoComplete="off" />
-          </div>
-        </div>
 
-        <div className="field">
-          <label>Places</label>
-          <table className="tbl" style={{ maxWidth: 520 }}>
+          <div className="row3">
+            <div className="field">
+              <label htmlFor="rm-nom">{exposant ? 'Nom ou structure' : 'Nom et prénom'}</label>
+              <input id="rm-nom" name="nom" required minLength={2} autoComplete="off" />
+            </div>
+            <div className="field">
+              <label htmlFor="rm-tel">Téléphone (facultatif)</label>
+              <input id="rm-tel" name="telephone" type="tel" autoComplete="off" />
+            </div>
+            <div className="field">
+              <label htmlFor="rm-email">E-mail (facultatif)</label>
+              <input id="rm-email" name="email" type="email" autoComplete="off" />
+            </div>
+          </div>
+
+          <div className="field">
+            <label>{exposant ? 'Formules' : 'Places'}</label>
+            <table className="tbl" style={{ maxWidth: 560 }}>
+              <tbody>
+                {lignes.map((l) => (
+                  <tr key={l.id}>
+                    <td>{l.libelle}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{l.id === 'defaut' && exposant ? 'prix libre' : euros(l.prix)}</td>
+                    <td style={{ width: 110 }}>
+                      <input type="hidden" name="tarif_id" value={l.id} />
+                      <input
+                        name="tarif_qte" type="number" min={0} max={99} inputMode="numeric"
+                        aria-label={`Quantité ${l.libelle}`}
+                        value={qtes[l.id] ?? 0}
+                        onChange={(e) => setQtes((q) => ({ ...q, [l.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
+                        style={{ ...champ, width: 90 }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="row3">
+            <div className="field">
+              <label htmlFor="rm-montant">
+                {exposant ? 'Montant' : `Montant (${quantite} place${quantite > 1 ? 's' : ''})`}
+              </label>
+              <input id="rm-montant" name="montant" inputMode="decimal"
+                value={montantSaisi ?? enSaisie(total)} onChange={(e) => setMontantSaisi(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="rm-paiement">Paiement</label>
+              <select id="rm-paiement" name="paiement" value={paiement} onChange={(e) => setPaiement(e.target.value)}>
+                <option value="especes">Espèces</option>
+                <option value="cheque">Chèque</option>
+                <option value="attente">Pas encore payé</option>
+              </select>
+            </div>
+            {paiement === 'cheque' && (
+              <div className="field">
+                <label htmlFor="rm-ref">N° du chèque (facultatif)</label>
+                <input id="rm-ref" name="paiement_ref" autoComplete="off" />
+              </div>
+            )}
+          </div>
+          {montantSaisi !== null && (
+            <p style={{ fontSize: '.8rem', color: '#6b6560', margin: '-.4rem 0 .9rem' }}>
+              Montant modifié à la main, tarif normal {euros(total)}.{' '}
+              <button type="button" onClick={() => setMontantSaisi(null)}
+                style={{ background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0 }}>
+                Revenir au tarif normal
+              </button>
+            </p>
+          )}
+
+          <div className="field">
+            <label htmlFor="rm-com">{exposant ? 'Activité, produits vendus, remarque' : 'Remarque (facultatif)'}</label>
+            <input id="rm-com" name="commentaire" autoComplete="off" />
+          </div>
+
+          {!exposant && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1.1rem', fontSize: '.9rem' }}>
+              {paiement !== 'attente' && (
+                <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
+                  <input type="checkbox" name="envoyer_billet" defaultChecked style={{ width: 'auto' }} />
+                  Envoyer le billet par e-mail (si une adresse est saisie)
+                </label>
+              )}
+              {evt.places_max != null && (
+                <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
+                  <input type="checkbox" name="depasser" style={{ width: 'auto' }} />
+                  Autoriser le dépassement de la jauge
+                </label>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+            <button className="btn btn-k btn-sm" disabled={pending || quantite < 1}>
+              {pending ? 'Enregistrement…' : exposant ? "Ajouter l'exposant" : 'Ajouter la réservation'}
+            </button>
+            <button type="button" className="btn btn-w btn-sm" onClick={() => setOuvert(false)}>Fermer</button>
+          </div>
+        </form>
+      )}
+
+      {exposant && evt && (
+        <div style={{ marginTop: '1.6rem', paddingTop: '1.2rem', borderTop: '2px solid var(--noir)' }}>
+          <h2 style={{ fontSize: '1rem' }}>Formules exposants de « {evt.titre} »</h2>
+          {erreurFormule && <div className="msg ko">{erreurFormule}</div>}
+          <table className="tbl" style={{ maxWidth: 560, marginBottom: '1rem' }}>
             <tbody>
-              {lignes.map((l) => (
-                <tr key={l.id}>
-                  <td>{l.libelle}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{euros(l.prix)}</td>
+              {formulesEvt.map((f) => (
+                <tr key={f.id}>
+                  <td>{f.libelle}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{euros(f.prix_centimes)}</td>
                   <td style={{ width: 110 }}>
-                    <input type="hidden" name="tarif_id" value={l.id} />
-                    <input
-                      name="tarif_qte" type="number" min={0} max={99} inputMode="numeric"
-                      aria-label={`Nombre de places ${l.libelle}`}
-                      value={qtes[l.id] ?? 0}
-                      onChange={(e) => setQtes((q) => ({ ...q, [l.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))}
-                      style={{ width: 90, padding: '.5rem', border: '2px solid var(--noir)', fontFamily: 'inherit' }}
-                    />
+                    <button type="button" className="btn btn-w btn-sm" disabled={enCours}
+                      onClick={() => start(async () => {
+                        const r = await supprimerFormuleExposant(f.id);
+                        setErreurFormule(r.erreur ?? '');
+                      })}>
+                      Retirer
+                    </button>
                   </td>
                 </tr>
               ))}
+              {formulesEvt.length === 0 && (
+                <tr><td colSpan={3} style={{ color: '#6b6560' }}>Aucune formule : l&apos;emplacement est à prix libre.</td></tr>
+              )}
             </tbody>
           </table>
-        </div>
-
-        <div className="row3">
-          <div className="field">
-            <label htmlFor="rm-montant">Montant ({places} place{places > 1 ? 's' : ''})</label>
-            <input
-              id="rm-montant" name="montant" inputMode="decimal"
-              value={montantSaisi ?? enSaisie(total)}
-              onChange={(e) => setMontantSaisi(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rm-paiement">Paiement</label>
-            <select id="rm-paiement" name="paiement" value={paiement} onChange={(e) => setPaiement(e.target.value)}>
-              <option value="especes">Espèces</option>
-              <option value="cheque">Chèque</option>
-              <option value="attente">Pas encore payé</option>
-            </select>
-          </div>
-          {paiement === 'cheque' && (
-            <div className="field">
-              <label htmlFor="rm-ref">N° du chèque (facultatif)</label>
-              <input id="rm-ref" name="paiement_ref" autoComplete="off" />
-            </div>
-          )}
-        </div>
-        {montantSaisi !== null && (
-          <p style={{ fontSize: '.8rem', color: '#6b6560', margin: '-.4rem 0 .9rem' }}>
-            Montant modifié à la main, tarif normal {euros(total)}.{' '}
-            <button type="button" onClick={() => setMontantSaisi(null)}
-              style={{ background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0 }}>
-              Revenir au tarif normal
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <input aria-label="Libellé de la formule" placeholder="Ex. Emplacement 3 m, Table, Électricité"
+              value={nouveauLibelle} onChange={(e) => setNouveauLibelle(e.target.value)}
+              style={{ ...champ, flex: '2 1 220px', minWidth: 0 }} />
+            <input aria-label="Prix de la formule" placeholder="Prix €" inputMode="decimal"
+              value={nouveauPrix} onChange={(e) => setNouveauPrix(e.target.value)}
+              style={{ ...champ, flex: '0 1 110px', minWidth: 0 }} />
+            <button type="button" className="btn btn-y btn-sm" disabled={enCours}
+              onClick={() => start(async () => {
+                const r = await ajouterFormuleExposant(evt.id, nouveauLibelle, nouveauPrix);
+                setErreurFormule(r.erreur ?? '');
+                if (r.ok) { setNouveauLibelle(''); setNouveauPrix(''); }
+              })}>
+              Ajouter la formule
             </button>
-          </p>
-        )}
-
-        <div className="field">
-          <label htmlFor="rm-com">Remarque (facultatif)</label>
-          <input id="rm-com" name="commentaire" autoComplete="off" />
+          </div>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1.1rem', fontSize: '.9rem' }}>
-          {paiement !== 'attente' && (
-            <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
-              <input type="checkbox" name="envoyer_billet" defaultChecked style={{ width: 'auto' }} />
-              Envoyer le billet par e-mail (si une adresse est saisie)
-            </label>
-          )}
-          {evt?.places_max != null && (
-            <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
-              <input type="checkbox" name="depasser" style={{ width: 'auto' }} />
-              Autoriser le dépassement de la jauge
-            </label>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-k btn-sm" disabled={pending || places < 1}>
-            {pending ? 'Enregistrement…' : 'Ajouter la réservation'}
-          </button>
-          <button type="button" className="btn btn-w btn-sm" onClick={() => setOuvert(false)}>Fermer</button>
-        </div>
-      </form>
+      )}
     </div>
   );
 }
@@ -2217,6 +2449,7 @@ export default function LigneReservation({ resa }: { resa: any }) {
       <tr style={{ opacity: pending ? .5 : 1 }}>
         <td data-l="Acheteur" className="bloc">
           <strong>{resa.nom}</strong>
+          {resa.exposant && <> <span className="pill done">Exposant</span></>}
           {resa.email && (
             <><br /><a href={`mailto:${resa.email}`} style={{ color: '#6b6560', fontSize: '.8rem' }}>
               {resa.email}
@@ -2236,8 +2469,8 @@ export default function LigneReservation({ resa }: { resa: any }) {
         </td>
         <td data-l="Événement" style={{ fontSize: '.85rem' }}>{resa.evenements?.titre}</td>
         <td data-l="Places">
-          {resa.places}
-          {resa.reservation_lignes?.length > 1 && (
+          {resa.exposant ? '' : resa.places}
+          {(resa.exposant ? resa.reservation_lignes?.length > 0 : resa.reservation_lignes?.length > 1) && (
             <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
               {resa.reservation_lignes.map((l: any, i: number) => (
                 <div key={i}>{l.quantite}× {l.libelle}</div>
@@ -2400,13 +2633,13 @@ export default function ListeReservationsLecture({ reservations }: { reservation
             <tr key={r.id}>
               <td data-l="Date">{fmt(r.created_at)}</td>
               <td data-l="Acheteur" className="bloc">
-                <strong>{r.nom}</strong><br />
+                <strong>{r.nom}</strong>{r.exposant && <> <span className="pill done">Exposant</span></>}<br />
                 <span style={{ color: '#6b6560', fontSize: '.8rem' }}>{[r.email, r.telephone].filter(Boolean).join(' · ')}</span>
               </td>
               <td data-l="Événement" style={{ fontSize: '.85rem' }}>{r.evenements?.titre}</td>
               <td data-l="Places">
-                {r.places}
-                {r.reservation_lignes?.length > 1 && (
+                {r.exposant ? '' : r.places}
+                {(r.exposant ? r.reservation_lignes?.length > 0 : r.reservation_lignes?.length > 1) && (
                   <div style={{ fontSize: '.72rem', color: '#6b6560', marginTop: '.2rem' }}>
                     {r.reservation_lignes.map((l: any, i: number) => <div key={i}>{l.quantite}× {l.libelle}</div>)}
                   </div>
@@ -2491,11 +2724,12 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
   /** Export comptable : toutes les réservations, tous statuts. */
   function exportComplet(resas: any[], nom: string) {
     const lignes: string[][] = [
-      ['Référence', 'Date réservation', 'Nom', 'Email', 'Téléphone',
+      ['Référence', 'Type', 'Date réservation', 'Nom', 'Email', 'Téléphone',
        'Événement', 'Places', 'Montant €', 'Statut', 'Code billet',
-       'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Remarque'],
+       'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Détail', 'Remarque'],
       ...resas.map((r) => [
         r.reference,
+        r.exposant ? 'Exposant' : 'Participant',
         new Date(r.created_at).toLocaleDateString('fr-FR'),
         r.nom, r.email ?? '', r.telephone ?? '',
         r.evenements?.titre ?? '',
@@ -2506,6 +2740,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
         r.mode_paiement === 'especes' ? 'Espèces' : r.mode_paiement === 'cheque' ? 'Chèque' : r.statut === 'payee' ? 'SumUp' : '',
         r.transaction_code ?? '',
         r.paiement_ref ?? '',
+        (r.reservation_lignes ?? []).map((l: any) => `${l.quantite} x ${l.libelle}`).join(', '),
         r.commentaire ?? '',
       ]),
     ];
@@ -2585,4 +2820,4 @@ echo
 echo "Terminé : 11 fichiers écrits."
 echo "Étapes suivantes :"
 echo "  1. Réexécuter supabase/comptabilite.sql dans l'éditeur SQL du projet Supabase du CDF"
-echo "  2. git add -A && git commit -m 'Réservations manuelles : espèces et chèques' && git push && vercel --prod"
+echo "  2. git add -A && git commit -m 'Réservations manuelles et exposants' && git push && vercel --prod"
