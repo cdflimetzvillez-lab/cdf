@@ -8,6 +8,7 @@ const LIENS_ADMIN = [
   { href: '/admin/evenements', label: 'Événements' },
   { href: '/admin/reservations', label: 'Réservations' },
   { href: '/admin/tresorerie', label: 'Trésorerie' },
+  { href: '/admin/compta', label: 'Comptabilité' },
   { href: '/admin/demandes', label: 'Demandes reçues' },
   { href: '/admin/tresors', label: 'Trésors de Noël' },
   { href: '/admin/pere-noel', label: '🎅 Père Noël vidéo' },
@@ -20,6 +21,7 @@ const LIENS_ADMIN = [
 
 const LIENS_TRESORIER = [
   { href: '/admin/tresorerie', label: 'Trésorerie (lecture seule)' },
+  { href: '/admin/compta', label: 'Comptabilité' },
 ];
 
 export default function NavAdmin({ role = 'admin' }: { role?: 'admin' | 'tresorier' }) {

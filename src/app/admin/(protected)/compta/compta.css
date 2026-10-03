@@ -1,0 +1,74 @@
+/* Module comptabilité : présentation sobre, type logiciel de gestion. */
+.cpt{font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.45;color:#1D2630;}
+.cpt h1,.cpt h2,.cpt h3{font-family:inherit;text-transform:none;letter-spacing:0;font-weight:600;}
+.cpt h1{font-size:20px;}
+.cpt h2{font-size:14px;margin-bottom:8px;}
+.cpt a{color:#1F5FA8;}
+
+.cpt-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #C9D0D8;}
+.cpt-nav a{padding:6px 10px;border:1px solid #C9D0D8;border-radius:3px;background:#fff;color:#1D2630;text-decoration:none;font-size:13px;}
+.cpt-nav a.on{background:#1F5FA8;border-color:#1F5FA8;color:#fff;}
+
+.cpt-titre{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
+.cpt-outils{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.cpt-info{color:#5B6876;font-size:13px;margin-bottom:10px;}
+.cpt-ok{color:#1E7B45;font-size:13px;font-weight:600;margin-top:8px;}
+.cpt-ko{color:#B3261E;font-size:13px;font-weight:600;margin-top:8px;}
+.cpt-msg{padding:8px 10px;border:1px solid #C9D0D8;border-radius:3px;margin-bottom:10px;font-size:13px;font-weight:600;}
+.cpt-msg.ok{background:#E3F3E9;border-color:#9CCDB0;color:#17603A;}
+.cpt-msg.ko{background:#FBE6E4;border-color:#E3A8A3;color:#8E1D17;}
+
+.cpt-panneau{background:#fff;border:1px solid #C9D0D8;border-radius:3px;padding:10px;margin-bottom:10px;min-width:0;}
+.cpt-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.cpt-cols .cpt-panneau{margin-bottom:0;}
+
+.cpt-btn{font:inherit;font-size:13px;padding:6px 11px;border:1px solid #C9D0D8;border-radius:3px;background:#E4E8ED;color:#1D2630;cursor:pointer;display:inline-block;text-decoration:none;line-height:1.4;}
+.cpt a.cpt-btn{color:#1D2630;}
+.cpt-btn:hover{background:#D8DEE5;}
+.cpt-btn:disabled{opacity:.55;cursor:not-allowed;}
+.cpt-btn.p,.cpt a.cpt-btn.p{background:#1F5FA8;border-color:#1F5FA8;color:#fff;}
+.cpt-btn.p:hover{background:#1A5190;}
+.cpt-btn.mini{padding:3px 8px;font-size:12px;}
+.cpt-btn:focus-visible,.cpt input:focus-visible,.cpt select:focus-visible{outline:2px solid #1F5FA8;outline-offset:1px;}
+
+.cpt-defile{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.cpt-grille{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+.cpt-grille th,.cpt-grille td{border:1px solid #C9D0D8;padding:5px 7px;text-align:left;vertical-align:top;}
+.cpt-grille thead th{background:#E4E8ED;font-weight:600;white-space:nowrap;}
+.cpt-grille tbody tr:nth-child(even) td{background:#F6F7F9;}
+.cpt-grille tfoot td{background:#E4E8ED;font-weight:600;}
+.cpt-grille .n{text-align:right;white-space:nowrap;}
+.cpt-grille .fixe{white-space:nowrap;}
+.cpt-grille tr.groupe td{background:#EEF1F4;font-weight:600;}
+.cpt-grille tr.annulee td{color:#7A8794;}
+.cpt-grille input[type=checkbox]{width:16px;height:16px;}
+.cpt-grille td input[type=text],.cpt-grille td select{width:100%;min-width:90px;font:inherit;font-size:13px;padding:4px 6px;border:1px solid #C9D0D8;border-radius:3px;background:#fff;color:#1D2630;}
+.cpt-grille td input.n{text-align:right;min-width:80px;}
+
+.cpt-champs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cpt-filtres{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;align-items:end;}
+.cpt-champ.l2{grid-column:span 2;}
+.cpt-champ label,.cpt-champ .etq{display:block;font-size:12px;color:#5B6876;margin-bottom:2px;}
+.cpt-champ input,.cpt-champ select{width:100%;font:inherit;font-size:14px;padding:6px 7px;border:1px solid #C9D0D8;border-radius:3px;background:#fff;color:#1D2630;}
+.cpt-champ input.n{text-align:right;}
+.cpt-champ input[type=checkbox]{width:auto;}
+.cpt-ligne{display:flex;flex-wrap:wrap;gap:8px;align-items:end;}
+.cpt-ligne .cpt-champ{flex:1 1 140px;}
+.cpt-regles{padding-left:18px;font-size:13px;}
+.cpt-regles li{margin-bottom:3px;}
+.cpt-etat{display:inline-block;padding:1px 7px;border:1px solid #C9D0D8;border-radius:10px;font-size:12px;background:#F6F7F9;white-space:nowrap;}
+.cpt-etat.vert{background:#E3F3E9;border-color:#9CCDB0;color:#17603A;}
+.cpt-etat.rouge{background:#FBE6E4;border-color:#E3A8A3;color:#8E1D17;}
+.cpt-etat.jaune{background:#FFF4CC;border-color:#E3CE7A;color:#6A5200;}
+
+@media (max-width:860px){
+  .cpt-cols{grid-template-columns:1fr;}
+  .cpt-champs,.cpt-filtres{grid-template-columns:1fr 1fr;}
+  .cpt-champ.l2{grid-column:1 / -1;}
+  .cpt-grille.large{min-width:720px;}
+}
+@media print{
+  .adm-side,.cpt-nav,.cpt-outils,.cpt-filtres{display:none !important;}
+  .adm-main{padding:0;max-width:none;}
+  .cpt-panneau{border:0;padding:0;}
+}

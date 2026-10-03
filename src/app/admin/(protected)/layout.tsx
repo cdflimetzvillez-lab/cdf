@@ -27,10 +27,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
-  // Un trésorier ne voit que l'espace trésorerie (lecture seule).
+  // Un trésorier ne voit que l'espace trésorerie (lecture seule) et la comptabilité.
   if (!isAdmin) {
     const path = (await headers()).get('x-pathname') ?? '';
-    if (path && !path.startsWith('/admin/tresorerie')) redirect('/admin/tresorerie');
+    const autorise = path.startsWith('/admin/tresorerie') || path.startsWith('/admin/compta');
+    if (path && !autorise) redirect('/admin/tresorerie');
   }
 
   return (
