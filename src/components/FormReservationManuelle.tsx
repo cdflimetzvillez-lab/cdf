@@ -25,7 +25,7 @@ export default function FormReservationManuelle({
   const [evenementId, setEvenementId] = useState('');
   const [qtes, setQtes] = useState<Record<string, number>>({});
   const [montantSaisi, setMontantSaisi] = useState<string | null>(null);
-  const [paiement, setPaiement] = useState('especes');
+  const [paiement, setPaiement] = useState('attente');
   const [etat, action, pending] = useActionState<EtatManuel, FormData>(ajouterReservationManuelle, null);
 
   // Gestion des formules exposants
