@@ -162,6 +162,40 @@ export async function enregistrerEvenement(_prev: Retour, fd: FormData): Promise
   return { ok: id ? 'Événement modifié.' : 'Événement créé.' };
 }
 
+/**
+ * Crée un événement à la volée depuis l'écran de saisie (événement passé ou absent du site).
+ * Le code est déduit du libellé ; il reste modifiable dans « Budgets par événement ».
+ */
+export async function creerEvenementRapide(libelleSaisi: string, date: string): Promise<{
+  erreur?: string;
+  evenement?: { id: string; code: string; libelle: string; date_evenement: string | null; statut: 'a_venir' | 'en_cours' | 'termine' };
+}> {
+  const { supabase, isStaff } = await requireAdmin();
+  if (!isStaff) return REFUS;
+  const libelle = libelleSaisi.trim();
+  if (libelle.length < 2) return { erreur: 'Le nom de l\u2019événement est obligatoire.' };
+  if (date && !estDateIso(date)) return { erreur: 'Date invalide.' };
+
+  // Code : lettres et chiffres du libellé, sans accents, 10 caractères au plus.
+  const base =
+    libelle.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'EVT';
+  const { data: pris } = await supabase.from('compta_evenements').select('code').like('code', `${base.slice(0, 8)}%`);
+  const codes = new Set((pris ?? []).map((e) => e.code));
+  let code = base;
+  for (let n = 2; codes.has(code); n++) code = `${base.slice(0, 8)}-${n}`;
+
+  const jour = new Date().toISOString().slice(0, 10);
+  const statut = !date ? 'en_cours' : date < jour ? 'termine' : 'a_venir';
+  const { data, error } = await supabase
+    .from('compta_evenements')
+    .insert({ code, libelle, date_evenement: date || null, statut })
+    .select('id, code, libelle, date_evenement, statut')
+    .single();
+  if (error || !data) return { erreur: error?.message ?? 'Création impossible.' };
+  rafraichir();
+  return { evenement: data };
+}
+
 /** Fixe le montant prévu d'un compte pour un événement (0 retire la ligne). */
 export async function enregistrerBudget(_prev: Retour, fd: FormData): Promise<Retour> {
   const { supabase, isStaff } = await requireAdmin();
