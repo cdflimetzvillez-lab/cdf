@@ -19,12 +19,11 @@ export type Reglages = {
   /** Montant unitaire affiché d'un lot du grand trésor, ex. « 100 € ». */
   grand_tresor_montant: string;
   grand_tresor_texte: string;
-  /** Nombre de lots du grand trésor = nombre de clés tirées au sort. */
+  /** Nombre de lots du grand trésor. Pour l'affichage public, il est recalculé d'après le stock des lots marqués « grand ». */
   grand_tresor_nombre: number;
   lieu_revelation: string;
-  /** Première clé gagnante (ancien format, sert aussi de verrou du tirage). */
+  /** Colonnes de l'ancien tirage séparé du grand trésor : plus utilisées (tirage unique à la révélation). */
   tirage_cle_id: string | null;
-  /** Toutes les clés gagnantes, dans l'ordre de sortie. */
   tirage_cle_ids: string[] | null;
   tirage_le: string | null;
   module_actif: boolean;
@@ -129,7 +128,7 @@ export type Progression = {
 
 export const numeroCle = (n: number) => String(n).padStart(3, '0');
 
-/* ---------- Grand trésor : plusieurs lots identiques, un gagnant par lot ---------- */
+/* ---------- Grand trésor : plusieurs lots identiques, mêlés aux autres lots à la révélation ---------- */
 
 /** Nombre de lots du grand trésor (1 au minimum, même si la colonne n'existe pas encore en base). */
 export const nombreGrandTresor = (r: { grand_tresor_nombre?: number | null }) => Math.max(1, Math.floor(Number(r.grand_tresor_nombre)) || 1);
@@ -140,10 +139,6 @@ export const montantGrandTresor = (r: { grand_tresor_nombre?: number | null; gra
   const unitaire = (r.grand_tresor_montant ?? '').replace(/ /g, '\u00a0');
   return n > 1 ? `${n}\u00a0×\u00a0${unitaire}` : unitaire;
 };
-
-/** Clés gagnantes enregistrées (nouveau format, sinon l'ancienne colonne à une seule clé). */
-export const clesTirees = (r: { tirage_cle_ids?: string[] | null; tirage_cle_id?: string | null } | null | undefined): string[] =>
-  r?.tirage_cle_ids?.length ? r.tirage_cle_ids : r?.tirage_cle_id ? [r.tirage_cle_id] : [];
 
 const NOMBRES = ['zéro', 'une', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
 /** Petit nombre en toutes lettres, accordé au féminin (« une carte », « trois clés »). */

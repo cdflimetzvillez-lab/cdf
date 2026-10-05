@@ -48,7 +48,7 @@ export default async function AdminTresors() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem', alignItems: 'flex-start' }}>
             <Link className="btn btn-w btn-sm" href="/admin/tresors/missions/nouvelle">+ Nouvelle mission</Link>
             <Link className="btn btn-w btn-sm" href="/admin/tresors/lots">Gérer les lots</Link>
-            <Link className="btn btn-w btn-sm" href="/admin/tresors/cles">Tirage du grand trésor</Link>
+            <Link className="btn btn-w btn-sm" href="/admin/tresors/cles">Clés et lots attribués</Link>
           </div>
         </div>
       </div>

@@ -1,5 +1,24 @@
-/** Hotte du Père Noël débordant de cadeaux, avec son halo intégré (rien ne déborde du SVG). */
-export default function Hotte({ className = '', etiquette = '' }: { className?: string; etiquette?: string }) {
+/** Cartes cadeaux qui sortent de la hotte : centre (cx, cy) et inclinaison, de l'arrière vers l'avant. */
+const POSES_CARTES: Record<number, { cx: number; cy: number; angle: number }[]> = {
+  1: [{ cx: 200, cy: 86, angle: -6 }],
+  2: [{ cx: 160, cy: 96, angle: -13 }, { cx: 244, cy: 90, angle: 9 }],
+  3: [{ cx: 140, cy: 104, angle: -17 }, { cx: 196, cy: 78, angle: -5 }, { cx: 256, cy: 96, angle: 10 }],
+};
+const CARTE_L = 124;
+const CARTE_H = 76.5; // proportions du visuel (480 × 296)
+
+type Props = {
+  className?: string;
+  etiquette?: string;
+  /** Nombre de cartes cadeaux à faire sortir de la hotte (3 au plus sont dessinées). 0 : les paquets d'origine. */
+  cartes?: number;
+  /** Image de la carte (fichier de /public, coins arrondis en transparence). Sans image, aucune carte n'est dessinée. */
+  visuelCarte?: string;
+};
+
+/** Hotte du Père Noël débordant de cadeaux (ou des cartes du grand trésor), avec son halo intégré (rien ne déborde du SVG). */
+export default function Hotte({ className = '', etiquette = '', cartes = 0, visuelCarte = '' }: Props) {
+  const poses = visuelCarte ? POSES_CARTES[Math.min(Math.max(Math.floor(cartes), 0), 3)] ?? [] : [];
   // Étiquette courte (« 300 € ») ou large (« 3 × 100 € ») : le rectangle s'élargit vers la gauche du sac.
   const large = etiquette.length > 6;
   const x = large ? 208 : 236;
@@ -17,13 +36,30 @@ export default function Hotte({ className = '', etiquette = '' }: { className?: 
       </defs>
       <ellipse cx="200" cy="175" rx="200" ry="150" fill="url(#hotte-halo)" />
 
-      {/* cadeaux qui dépassent */}
-      <g transform="rotate(-12 150 118)"><rect x="118" y="88" width="62" height="60" rx="5" fill="url(#hotte-vert)" /><rect x="118" y="112" width="62" height="12" fill="url(#hotte-or)" /><rect x="143" y="88" width="12" height="60" fill="url(#hotte-or)" /></g>
-      <g transform="rotate(10 250 108)"><rect x="216" y="70" width="70" height="72" rx="5" fill="url(#hotte-bleu)" /><rect x="216" y="100" width="70" height="12" fill="#fbf7ef" /><rect x="245" y="70" width="12" height="72" fill="#fbf7ef" /><path d="M251 66 c-12 -14 -28 -2 -10 6 c-18 0 -8 -18 10 -6 c18 -12 28 6 10 6 c18 -8 2 -20 -10 -6z" fill="#fbf7ef" /></g>
-      <rect x="180" y="96" width="48" height="52" rx="5" fill="url(#hotte-or)" /><rect x="180" y="118" width="48" height="10" fill="#8a2a3a" /><rect x="199" y="96" width="10" height="52" fill="#8a2a3a" />
-      {/* sucre d'orge */}
-      <path d="M292 122 c0 -30 24 -32 26 -12" fill="none" stroke="#fbf7ef" strokeWidth="9" strokeLinecap="round" />
-      <path d="M292 122 c0 -30 24 -32 26 -12" fill="none" stroke="#c22a45" strokeWidth="9" strokeLinecap="round" strokeDasharray="7 7" />
+      {/* cadeaux qui dépassent (les paquets vert et bleu s'effacent quand trois cartes occupent toute l'ouverture) */}
+      {poses.length < 3 && (
+        <>
+          <g transform="rotate(-12 150 118)"><rect x="118" y="88" width="62" height="60" rx="5" fill="url(#hotte-vert)" /><rect x="118" y="112" width="62" height="12" fill="url(#hotte-or)" /><rect x="143" y="88" width="12" height="60" fill="url(#hotte-or)" /></g>
+          <g transform="rotate(10 250 108)"><rect x="216" y="70" width="70" height="72" rx="5" fill="url(#hotte-bleu)" /><rect x="216" y="100" width="70" height="12" fill="#fbf7ef" /><rect x="245" y="70" width="12" height="72" fill="#fbf7ef" /><path d="M251 66 c-12 -14 -28 -2 -10 6 c-18 0 -8 -18 10 -6 c18 -12 28 6 10 6 c18 -8 2 -20 -10 -6z" fill="#fbf7ef" /></g>
+        </>
+      )}
+      {poses.length === 0 ? (
+        <>
+          <rect x="180" y="96" width="48" height="52" rx="5" fill="url(#hotte-or)" /><rect x="180" y="118" width="48" height="10" fill="#8a2a3a" /><rect x="199" y="96" width="10" height="52" fill="#8a2a3a" />
+          {/* sucre d'orge */}
+          <path d="M292 122 c0 -30 24 -32 26 -12" fill="none" stroke="#fbf7ef" strokeWidth="9" strokeLinecap="round" />
+          <path d="M292 122 c0 -30 24 -32 26 -12" fill="none" stroke="#c22a45" strokeWidth="9" strokeLinecap="round" strokeDasharray="7 7" />
+        </>
+      ) : (
+        // Cartes du grand trésor : glissées dans l'ouverture, le bas caché par le col de la hotte.
+        poses.map((c, i) => (
+          <g key={i} transform={`rotate(${c.angle} ${c.cx} ${c.cy})`}>
+            <rect x={c.cx - CARTE_L / 2 + 1.5} y={c.cy - CARTE_H / 2 + 2.5} width={CARTE_L} height={CARTE_H} rx="4.5" fill="#04091a" opacity=".45" />
+            <image href={visuelCarte} x={c.cx - CARTE_L / 2} y={c.cy - CARTE_H / 2} width={CARTE_L} height={CARTE_H} preserveAspectRatio="none" />
+            <rect x={c.cx - CARTE_L / 2} y={c.cy - CARTE_H / 2} width={CARTE_L} height={CARTE_H} rx="4.5" fill="none" stroke="rgba(255,255,255,.35)" strokeWidth=".8" />
+          </g>
+        ))
+      )}
 
       {/* sac */}
       <path d="M112 150 C 90 200 86 250 104 292 Q 200 312 296 292 C 314 250 310 200 288 150 Q 200 170 112 150 Z" fill="url(#hotte-sac)" />
@@ -43,7 +79,9 @@ export default function Hotte({ className = '', etiquette = '' }: { className?: 
           textLength={etiquette.length > 10 ? largeur - 18 : undefined} lengthAdjust="spacingAndGlyphs">{etiquette}</text>
       </g>
       {/* scintillements */}
-      <g fill="#fbf7ef"><path d="M70 90 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" /><path d="M330 60 l2.5 6.5 6.5 2.5 -6.5 2.5 -2.5 6.5 -2.5 -6.5 -6.5 -2.5 6.5 -2.5z" /><path d="M320 200 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" /></g>
+      <g fill="#fbf7ef">
+        {/* avec trois cartes, les deux étoiles du haut s'écartent pour ne pas toucher les cartes */}
+        <path d={`${poses.length === 3 ? 'M48 62' : 'M70 90'} l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z`} /><path d={`${poses.length === 3 ? 'M354 44' : 'M330 60'} l2.5 6.5 6.5 2.5 -6.5 2.5 -2.5 6.5 -2.5 -6.5 -6.5 -2.5 6.5 -2.5z`} /><path d="M320 200 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" /></g>
     </svg>
   );
 }

@@ -12,6 +12,17 @@ export async function lireReglages(): Promise<Reglages> {
   return data as Reglages;
 }
 
+/**
+ * Réglages pour l'affichage public du grand trésor : le nombre de lots suit le stock des lots
+ * marqués « grand trésor » (onglet Lots), seule source de vérité de ce qui est réellement mis en jeu.
+ */
+export async function lireReglagesPublics(): Promise<Reglages> {
+  const db = createAdminClient();
+  const [r, { data: lots }] = await Promise.all([lireReglages(), db.from('tdn_lots').select('stock').eq('grand', true)]);
+  const stock = (lots ?? []).reduce((s, l) => s + (Number(l.stock) || 0), 0);
+  return stock > 0 ? { ...r, grand_tresor_nombre: stock } : r;
+}
+
 export async function lireMissions(): Promise<Mission[]> {
   const db = createAdminClient();
   const { data } = await db.from('tdn_missions').select('*').eq('publie', true).order('numero');

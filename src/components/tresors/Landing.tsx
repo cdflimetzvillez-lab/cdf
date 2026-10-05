@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Neige from './Neige';
 import Village from './Village';
+import GrandTresor from './GrandTresor';
 import type { Reglages } from '@/lib/tresors/types';
 
 const ETAPES = [
@@ -44,10 +45,13 @@ export default function Landing({ reglages: r, connecte }: { reglages: Reglages;
             {ctaPrincipal}
             <Link href="/tresors-de-noel/regles" className="tdn-btn tdn-btn-ghost">Découvrir les règles</Link>
           </div>
+          <p className="tdn-mini" style={{ marginTop: '1rem' }}><a href="#tresor" className="tdn-lien">Découvrir le grand trésor ↓</a></p>
           {!connecte && <p className="tdn-mini" style={{ marginTop: '1rem' }}><Link href="/tresors-de-noel/acces" className="tdn-lien">Déjà inscrit ? Retrouver mon compte</Link></p>}
         </div>
         <Village />
       </section>
+
+      <GrandTresor reglages={r} />
 
       <section className="tdn-section">
         <ul className="tdn-resume">

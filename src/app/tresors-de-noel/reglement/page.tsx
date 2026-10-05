@@ -18,7 +18,8 @@ export default async function PageReglementTdn() {
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cdf-limetzvillez.fr';
   const nbMissions = missions.length || 12;
   // Grand trésor : une ou plusieurs cartes cadeaux identiques, une clé gagnante par carte.
-  const nbGrand = nombreGrandTresor(r);
+  // Nombre de cartes réellement mises en jeu : le stock des lots marqués « grand trésor ».
+  const nbGrand = lots.filter((l) => l.grand).reduce((n, l) => n + l.stock, 0) || nombreGrandTresor(r);
   const nbGrandTexte = `${enLettres(nbGrand)} (${nbGrand})`;
   // Regroupe les lots par nom (évite les doublons) et additionne les stocks.
   const autresLots = Object.values(
@@ -60,12 +61,13 @@ export default async function PageReglementTdn() {
       <p>Lorsqu&apos;un participant a validé l&apos;ensemble des missions, une <b>clé virtuelle</b> individuelle (numéro et code secret) est générée sur son compte. Cette clé est strictement personnelle. Aucune clé n&apos;est générée après la clôture du Jeu.</p>
 
       <h2>Article 6 · Dotations</h2>
-      <p><b>Chaque participant ayant obtenu sa clé virtuelle reçoit un lot</b>, dans les conditions de l&apos;article 7. Les lots sont attribués par tirage au sort informatique au moment de la révélation, parmi les lots disponibles, à l&apos;exception du grand trésor.</p>
+      <p><b>Chaque participant ayant obtenu sa clé virtuelle reçoit un lot</b>, dans les conditions de l&apos;article 7. Tous les lots, y compris le grand trésor, sont attribués par un tirage au sort informatique unique : au moment où une clé est révélée, son lot est tiré au sort parmi l&apos;ensemble des lots encore disponibles.</p>
       {nbGrand > 1 ? (
-        <p>Le <b>grand trésor</b> est composé de <b>{nbGrandTexte} cartes cadeaux multi-enseignes d&apos;une valeur unitaire de {r.grand_tresor_montant}</b>, utilisables dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu : {nbGrandTexte} clés différentes sont tirées au sort et chacune remporte une carte cadeau. Une même clé ne peut remporter qu&apos;une seule carte ; plusieurs clés d&apos;un même compte peuvent en revanche être tirées au sort. Les clés gagnantes sont révélées lors de la cérémonie de révélation.</p>
+        <p>Le <b>grand trésor</b> est composé de <b>{nbGrandTexte} cartes cadeaux multi-enseignes d&apos;une valeur unitaire de {r.grand_tresor_montant}</b>, utilisables dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Ces cartes font partie des lots mis en jeu lors de la révélation. <b>Un même compte ne peut remporter qu&apos;une seule carte cadeau du grand trésor</b> : lorsqu&apos;une clé d&apos;un compte a remporté une carte, les autres clés de ce compte sont tirées au sort parmi les autres lots.</p>
       ) : (
-        <p>Le <b>grand trésor</b> est une carte cadeau multi-enseignes d&apos;une valeur de {r.grand_tresor_montant}, utilisable dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu, et révélé lors de la cérémonie de révélation.</p>
+        <p>Le <b>grand trésor</b> est une carte cadeau multi-enseignes d&apos;une valeur de {r.grand_tresor_montant}, utilisable dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Cette carte fait partie des lots mis en jeu lors de la révélation.</p>
       )}
+      <p>Les lots qui n&apos;auraient pas été attribués à l&apos;issue de la révélation et du délai de retrait prévu à l&apos;article 7, y compris une carte cadeau du grand trésor, restent acquis à l&apos;Organisateur.</p>
       <p>Les autres lots mis en jeu sont les suivants, dans la limite des quantités indiquées :</p>
       <ul className="tdn-reglement-lots">
         {autresLots.map((l) => <li key={l.nom}><b>{l.nom}</b>{l.partenaire && ` (offert par ${l.partenaire})`} : {l.quantite} exemplaire{l.quantite > 1 ? 's' : ''}</li>)}

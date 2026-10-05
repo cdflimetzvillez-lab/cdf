@@ -9,7 +9,6 @@ import { requireAdmin } from '@/lib/supabase/server';
 import { creerCheckout, lireCheckout } from '@/lib/sumup';
 import { COOKIE_ACTIF, COOKIE_TOKEN, compteCourant, jeuOuvert, lireMissions, lireReglages, placesPrises } from '@/lib/tresors/db';
 import type { Categorie, Cle, Lot, Mission, Bloc } from '@/lib/tresors/types';
-import { clesTirees, nombreGrandTresor } from '@/lib/tresors/types';
 
 export type Etat = { ok?: string; erreur?: string } | null;
 
@@ -313,31 +312,85 @@ export async function validerReponse(missionId: string, reponse: string, partici
 
 /* =========================================================
    RÉVÉLATION (écran du Marché de Noël)
+   Tirage unique : tous les lots encore en stock sont dans la même urne, cartes du grand trésor
+   comprises. Seule règle : une seule carte du grand trésor par compte.
    ========================================================= */
+type Db = ReturnType<typeof createAdminClient>;
+
+/** Lots marqués « grand trésor » et clés du compte qui en détiennent déjà un (autres que la clé donnée). */
+async function cartesDuCompte(db: Db, compteId: string | null, cleId: string) {
+  const { data: grands } = await db.from('tdn_lots').select('id').eq('grand', true);
+  const idsGrands = (grands ?? []).map((l) => l.id as string);
+  if (!compteId || idsGrands.length === 0) return { idsGrands, autres: [] as string[] };
+  const { data: parts } = await db.from('tdn_participants').select('id').eq('compte_id', compteId);
+  const idsParts = (parts ?? []).map((x) => x.id as string);
+  if (idsParts.length === 0) return { idsGrands, autres: [] as string[] };
+  const { data: cles } = await db.from('tdn_cles').select('id, lot_id').in('participant_id', idsParts).in('lot_id', idsGrands);
+  return { idsGrands, autres: (cles ?? []).map((c) => c.id as string).filter((id) => id !== cleId) };
+}
+
+/** Tire un lot dans l'urne : un ticket par exemplaire restant en stock. Renvoie null si l'urne est vide. */
+async function tirerLot(db: Db, sansGrand: boolean): Promise<string | null> {
+  const [{ data: lots }, { data: attribs }] = await Promise.all([
+    db.from('tdn_lots').select('id, stock, grand'),
+    db.from('tdn_cles').select('lot_id').not('lot_id', 'is', null),
+  ]);
+  const pris: Record<string, number> = {};
+  for (const a of attribs ?? []) pris[a.lot_id as string] = (pris[a.lot_id as string] ?? 0) + 1;
+  const urne: string[] = [];
+  for (const l of lots ?? []) {
+    if (l.grand && sansGrand) continue;
+    for (let i = pris[l.id] ?? 0; i < l.stock; i++) urne.push(l.id as string);
+  }
+  return urne.length > 0 ? urne[randomInt(urne.length)] : null;
+}
+
 export async function reveler(numero: string, code: string): Promise<{ lot?: Lot; prenom?: string; dejaRevelee?: boolean; erreur?: string }> {
   const n = Number(numero.trim());
   const c = code.trim().toUpperCase();
   if (!n || !c) return { erreur: 'Clé incomplète.' };
   const db = createAdminClient();
-  const { data: cle } = await db.from('tdn_cles').select('*, tdn_participants(prenom)').eq('numero', n).eq('code', c).maybeSingle();
+  const { data: cle } = await db.from('tdn_cles').select('*, tdn_participants(prenom, compte_id)').eq('numero', n).eq('code', c).maybeSingle();
   if (!cle) return { erreur: 'Clé inconnue. Vérifiez le numéro et le code secret.' };
+  const participant = (cle as { tdn_participants?: { prenom: string; compte_id: string } | null }).tdn_participants ?? null;
+  const dejaRevelee = !!cle.revelee_le;
+  const maintenant = new Date().toISOString();
 
   let lotId: string | null = cle.lot_id;
-  if (!lotId) {
-    // Attribution : un lot non « grand » avec du stock restant, tiré au sort.
-    const { data: lots } = await db.from('tdn_lots').select('id, stock').eq('grand', false);
-    const { data: attribs } = await db.from('tdn_cles').select('lot_id').not('lot_id', 'is', null);
-    const compte: Record<string, number> = {};
-    for (const a of attribs ?? []) compte[a.lot_id!] = (compte[a.lot_id!] ?? 0) + 1;
-    const dispo: string[] = [];
-    for (const l of lots ?? []) for (let i = (compte[l.id] ?? 0); i < l.stock; i++) dispo.push(l.id);
-    if (dispo.length === 0) return { erreur: 'Plus aucun lot disponible. Adressez-vous aux bénévoles.' };
-    lotId = dispo[Math.floor(Math.random() * dispo.length)];
+  if (lotId) {
+    // Lot déjà attribué (révélation précédente ou attribution manuelle) : on ne retire jamais au sort.
+    if (!cle.revelee_le) await db.from('tdn_cles').update({ revelee_le: maintenant }).eq('id', cle.id);
+  } else {
+    const compteId = participant?.compte_id ?? null;
+    const { idsGrands, autres } = await cartesDuCompte(db, compteId, cle.id);
+    const tire = await tirerLot(db, autres.length > 0);
+    if (!tire) return { erreur: 'Plus aucun lot disponible. Adressez-vous aux bénévoles.' };
+    // On n'écrit que si la clé n'a toujours pas de lot (deux écrans sur la même clé en même temps).
+    const { data: ecrit } = await db.from('tdn_cles').update({ lot_id: tire, revelee_le: maintenant }).eq('id', cle.id).is('lot_id', null).select('lot_id').maybeSingle();
+    if (ecrit) {
+      lotId = tire;
+      // Deux clés d'un même compte révélées au même instant : une seule garde la carte, l'autre retire parmi les autres lots.
+      if (idsGrands.includes(tire)) {
+        const { autres: rivales } = await cartesDuCompte(db, compteId, cle.id);
+        if (rivales.some((id) => id < cle.id)) {
+          const autreLot = await tirerLot(db, true);
+          if (!autreLot) {
+            await db.from('tdn_cles').update({ lot_id: null, revelee_le: null }).eq('id', cle.id);
+            return { erreur: 'Plus aucun lot disponible. Adressez-vous aux bénévoles.' };
+          }
+          await db.from('tdn_cles').update({ lot_id: autreLot }).eq('id', cle.id);
+          lotId = autreLot;
+        }
+      }
+    } else {
+      const { data: relue } = await db.from('tdn_cles').select('lot_id').eq('id', cle.id).single();
+      lotId = relue?.lot_id ?? null;
+      if (!lotId) return { erreur: 'Révélation impossible pour le moment. Réessayez.' };
+    }
   }
-  const dejaRevelee = !!cle.revelee_le;
-  await db.from('tdn_cles').update({ lot_id: lotId, revelee_le: cle.revelee_le ?? new Date().toISOString() }).eq('id', cle.id);
   const { data: lot } = await db.from('tdn_lots').select('*, tdn_partenaires(nom)').eq('id', lotId).single();
-  return { lot: lot as Lot, prenom: (cle as { tdn_participants?: { prenom: string } }).tdn_participants?.prenom, dejaRevelee };
+  if (!lot) return { erreur: 'Lot introuvable. Adressez-vous aux bénévoles.' };
+  return { lot: lot as Lot, prenom: participant?.prenom, dejaRevelee };
 }
 
 /* =========================================================
@@ -372,12 +425,11 @@ export async function majReglagesTdn(_prev: Etat, fd: FormData): Promise<Etat> {
     places_max: Math.max(0, Number(fd.get('places_max') ?? 300)),
     jeu_debut: isoParisTdn(String(fd.get('jeu_debut') ?? '')),
     jeu_fin: isoParisTdn(String(fd.get('jeu_fin') ?? '')),
-    grand_tresor_nombre: Math.min(50, Math.max(1, Math.round(Number(fd.get('grand_tresor_nombre') ?? 1)) || 1)),
     grand_tresor_montant: String(fd.get('grand_tresor_montant') ?? '').trim(),
     grand_tresor_texte: String(fd.get('grand_tresor_texte') ?? '').trim(),
     lieu_revelation: String(fd.get('lieu_revelation') ?? '').trim(),
   }).eq('id', 1);
-  if (error) return { erreur: /grand_tresor_nombre/.test(error.message) ? 'Colonne manquante : exécutez supabase/tresors_v2.sql dans Supabase, puis réessayez.' : error.message };
+  if (error) return { erreur: error.message };
   chemins();
   return { ok: 'Réglages enregistrés.' };
 }
@@ -481,82 +533,6 @@ export async function supprimerParticipantAdmin(id: string) {
   chemins();
 }
 
-
-/* =========================================================
-   TIRAGE DU GRAND TRÉSOR (écran admin)
-   ========================================================= */
-export type Gagnant = { cleId: string; numero: number; prenom: string; famille: string };
-export type ResultatTirage = { ok: true; gagnants: Gagnant[]; deja: boolean } | { ok: false; erreur: string };
-
-const SQL_MANQUANT = 'Réglages du tirage illisibles : exécutez supabase/tresors_v2.sql dans Supabase, puis réessayez.';
-
-/** Détail des clés gagnantes, dans l'ordre du tirage. */
-async function lireGagnants(ids: string[]): Promise<Gagnant[]> {
-  if (ids.length === 0) return [];
-  const db = createAdminClient();
-  const { data } = await db.from('tdn_cles').select('id, numero, tdn_participants(prenom, tdn_comptes(prenom, nom))').in('id', ids);
-  const parId = new Map((data ?? []).map((c) => [c.id as string, c]));
-  return ids.flatMap((id) => {
-    const c = parId.get(id);
-    if (!c) return [];
-    const p = c.tdn_participants as unknown as { prenom: string; tdn_comptes: { prenom: string; nom: string } | null } | null;
-    return [{ cleId: c.id as string, numero: c.numero as number, prenom: p?.prenom ?? '', famille: p?.tdn_comptes ? `${p.tdn_comptes.prenom} ${p.tdn_comptes.nom}` : '' }];
-  });
-}
-
-/**
- * Tire au sort les clés gagnantes du grand trésor (autant que de lots, réglage « grand_tresor_nombre »),
- * parmi toutes les clés générées. Les clés sont toutes différentes : une clé ne gagne qu'un seul lot.
- * Le résultat est enregistré et verrouillé ; un second appel renvoie le même résultat.
- */
-export async function tirerGrandTresor(): Promise<ResultatTirage> {
-  await admin();
-  const db = createAdminClient();
-  const { data: r } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
-  if (!r) return { ok: false, erreur: SQL_MANQUANT };
-  const dejaTirees = clesTirees(r);
-  if (dejaTirees.length > 0) return { ok: true, gagnants: await lireGagnants(dejaTirees), deja: true };
-
-  const { data: cles } = await db.from('tdn_cles').select('id');
-  if (!cles || cles.length === 0) return { ok: false, erreur: 'Aucune clé générée : personne n’a terminé le jeu.' };
-  const { data: grand } = await db.from('tdn_lots').select('id').eq('grand', true).order('position').limit(1).maybeSingle();
-  if (!grand) return { ok: false, erreur: 'Aucun lot marqué « grand trésor » dans les lots.' };
-
-  // Mélange de Fisher-Yates partiel avec l'aléa cryptographique du serveur : N clés distinctes.
-  const ids = cles.map((c) => c.id as string);
-  const nombre = Math.min(nombreGrandTresor(r), ids.length);
-  for (let i = 0; i < nombre; i++) {
-    const j = i + randomInt(ids.length - i);
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-  }
-  const gagnantes = ids.slice(0, nombre);
-
-  // Verrou : on n’écrit que si aucun tirage n’a été enregistré entre-temps.
-  const { data: maj, error } = await db.from('tdn_reglages')
-    .update({ tirage_cle_id: gagnantes[0], tirage_cle_ids: gagnantes, tirage_le: new Date().toISOString() })
-    .eq('id', 1).is('tirage_cle_id', null).select('tirage_cle_id').maybeSingle();
-  if (error) { console.error('[tirerGrandTresor]', error); return { ok: false, erreur: SQL_MANQUANT }; }
-  if (!maj) {
-    const { data: r2 } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
-    return { ok: true, gagnants: await lireGagnants(clesTirees(r2)), deja: true };
-  }
-  await db.from('tdn_cles').update({ lot_id: grand.id }).in('id', gagnantes);
-  chemins();
-  return { ok: true, gagnants: await lireGagnants(gagnantes), deja: false };
-}
-
-/** Annule le tirage (retire le grand trésor des clés gagnantes) pour pouvoir le relancer. */
-export async function annulerTirage() {
-  await admin();
-  const db = createAdminClient();
-  const { data: r } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
-  const ids = clesTirees(r);
-  if (ids.length > 0) await db.from('tdn_cles').update({ lot_id: null, revelee_le: null }).in('id', ids);
-  const { error } = await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_cle_ids: [], tirage_le: null }).eq('id', 1);
-  // Base pas encore migrée (colonne tirage_cle_ids absente) : on libère au moins l'ancien verrou.
-  if (error) await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_le: null }).eq('id', 1);
-  chemins();
-}
 
 /** Interrupteur général : retire le module du menu et des pages publiques (les données sont conservées). */
 export async function basculerModuleTdn(actif: boolean) {
