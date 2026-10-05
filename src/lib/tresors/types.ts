@@ -130,6 +130,9 @@ export const numeroCle = (n: number) => String(n).padStart(3, '0');
 
 /* ---------- Grand trésor : plusieurs lots identiques, mêlés aux autres lots à la révélation ---------- */
 
+/** Visuel de la carte cadeau du grand trésor (fichier de /public) : hotte de l'accueil et écran de révélation. Mettre '' pour ne plus l'afficher. */
+export const VISUEL_CARTE_GRAND_TRESOR = '/tresors/carte-cadeau.webp';
+
 /** Nombre de lots du grand trésor (1 au minimum, même si la colonne n'existe pas encore en base). */
 export const nombreGrandTresor = (r: { grand_tresor_nombre?: number | null }) => Math.max(1, Math.floor(Number(r.grand_tresor_nombre)) || 1);
 

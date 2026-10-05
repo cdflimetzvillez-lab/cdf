@@ -2,7 +2,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import Neige from './Neige';
 import { reveler } from '@/app/tresors-actions';
-import type { Lot } from '@/lib/tresors/types';
+import { VISUEL_CARTE_GRAND_TRESOR, type Lot } from '@/lib/tresors/types';
 
 type Phase = 'saisie' | 'compte' | 'ouverture' | 'revele';
 
@@ -80,7 +80,16 @@ export default function Revelation() {
           {lot.grand && <div className="tdn-grand-tresor">Grand Trésor</div>}
           <h1 className="tdn-rev-titre">Félicitations{prenom ? `, ${prenom}` : ''} !</h1>
           <p className="tdn-rev-sous">Vous remportez :</p>
-          <div className="tdn-lot">{lot.nom}</div>
+          {lot.grand && VISUEL_CARTE_GRAND_TRESOR ? (
+            // Carte du grand trésor : la photo de la carte à côté du nom du lot.
+            <div className="tdn-lot tdn-lot-visuel">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="tdn-lot-photo" src={VISUEL_CARTE_GRAND_TRESOR} alt="" />
+              <span>{lot.nom}</span>
+            </div>
+          ) : (
+            <div className="tdn-lot">{lot.nom}</div>
+          )}
           {lot.tdn_partenaires?.nom && <p className="tdn-rev-partenaire">Offert par notre partenaire <b>{lot.tdn_partenaires.nom}</b></p>}
           {deja && <p className="tdn-erreur" style={{ display: 'inline-block' }}>Cette clé avait déjà été révélée.</p>}
           <p className="tdn-muted">Présentez cet écran aux bénévoles pour récupérer votre lot.</p>

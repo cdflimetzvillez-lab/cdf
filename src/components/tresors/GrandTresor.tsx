@@ -1,8 +1,5 @@
 import Hotte from './Hotte';
-import { enLettres, montantGrandTresor, nombreGrandTresor, type Reglages } from '@/lib/tresors/types';
-
-/** Visuel de la carte cadeau mise en jeu, dessinée dans la hotte. Mettre '' pour revenir aux paquets cadeaux. */
-const VISUEL_CARTE = '/tresors/carte-cadeau.webp';
+import { VISUEL_CARTE_GRAND_TRESOR, enLettres, montantGrandTresor, nombreGrandTresor, type Reglages } from '@/lib/tresors/types';
 
 /**
  * Bloc « Le grand trésor » : hotte, description, montant (« 3 × 100 € ») et principe du tirage
@@ -15,7 +12,7 @@ export default function GrandTresor({ reglages: r }: { reglages: Reglages }) {
   const montant = montantGrandTresor(r);
   return (
     <section className="tdn-section tdn-tresor" id="tresor">
-      <Hotte className="tdn-hotte" etiquette={montant} cartes={nombre} visuelCarte={VISUEL_CARTE} />
+      <Hotte className="tdn-hotte" etiquette={montant} cartes={nombre} visuelCarte={VISUEL_CARTE_GRAND_TRESOR} />
       <h2 className="tdn-h2">Le grand trésor</h2>
       <p className="tdn-quoi">{r.grand_tresor_texte}</p>
       <div className={`tdn-montant${nombre > 1 ? ' tdn-montant-multi' : ''}`}>{montant}</div>

@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+# Trésors de Noël, écran de révélation :
+#   1. Quand le lot gagné est une carte du grand trésor, la photo de la carte s'affiche à côté du nom du lot.
+#   2. Le bouton « Clé suivante » est détaché du texte qui le précède.
+# Ce script fait lui-même le commit et le push (rien d'autre à taper). Aucun SQL.
+set -euo pipefail
+if [ ! -f package.json ] || [ ! -d src/app ]; then echo "Lance ce script à la racine du repo."; exit 1; fi
+if [ ! -f public/tresors/carte-cadeau.webp ]; then echo "Image public/tresors/carte-cadeau.webp absente : lance d'abord maj-tresors-cartes-hotte.sh."; exit 1; fi
+mkdir -p 'src/app/tresors-de-noel'
+cat > 'src/app/tresors-de-noel/tresors.css' <<'EOF_PN_FICHIER'
 /* =========================================================
    LES TRÉSORS DE NOËL — feuille dédiée, préfixe .tdn
    Palette : bleu nuit, blanc neige, doré chaud, bordeaux, sapin.
@@ -469,3 +479,296 @@
 .tdn-tirage.defile{height:100svh;min-height:0;overflow-y:auto;align-items:flex-start;}
 .tdn-tirage.defile .tdn-tirage-inner{margin:auto 0;}
 @media (max-width:700px){.tdn-tirage.defile{padding-top:4.5rem;}}
+EOF_PN_FICHIER
+echo "  ✓ src/app/tresors-de-noel/tresors.css"
+mkdir -p 'src/components/tresors'
+cat > 'src/components/tresors/GrandTresor.tsx' <<'EOF_PN_FICHIER'
+import Hotte from './Hotte';
+import { VISUEL_CARTE_GRAND_TRESOR, enLettres, montantGrandTresor, nombreGrandTresor, type Reglages } from '@/lib/tresors/types';
+
+/**
+ * Bloc « Le grand trésor » : hotte, description, montant (« 3 × 100 € ») et principe du tirage
+ * (les cartes sont mêlées aux autres lots à la révélation, une seule carte par compte).
+ * Commun aux deux pages d'accueil du jeu : réservation (avant l'ouverture) et jeu ouvert.
+ */
+export default function GrandTresor({ reglages: r }: { reglages: Reglages }) {
+  // Une ou plusieurs cartes identiques, tirées au sort à la révélation avec les autres lots.
+  const nombre = nombreGrandTresor(r);
+  const montant = montantGrandTresor(r);
+  return (
+    <section className="tdn-section tdn-tresor" id="tresor">
+      <Hotte className="tdn-hotte" etiquette={montant} cartes={nombre} visuelCarte={VISUEL_CARTE_GRAND_TRESOR} />
+      <h2 className="tdn-h2">Le grand trésor</h2>
+      <p className="tdn-quoi">{r.grand_tresor_texte}</p>
+      <div className={`tdn-montant${nombre > 1 ? ' tdn-montant-multi' : ''}`}>{montant}</div>
+      {nombre > 1 ? (
+        <p className="tdn-comment">Les {enLettres(nombre)} cartes sont glissées parmi les lots de la révélation. Chaque clé ouvre un trésor tiré au sort : ce sera peut-être l&apos;une d&apos;elles. Une seule carte par compte.</p>
+      ) : (
+        <p className="tdn-comment">Il est glissé parmi les lots de la révélation. Chaque clé ouvre un trésor tiré au sort : ce sera peut-être celui-là.</p>
+      )}
+      <p className="tdn-autres">…et de nombreux autres lots, un pour chaque participant qui termine l&apos;aventure.</p>
+    </section>
+  );
+}
+EOF_PN_FICHIER
+echo "  ✓ src/components/tresors/GrandTresor.tsx"
+mkdir -p 'src/components/tresors'
+cat > 'src/components/tresors/Revelation.tsx' <<'EOF_PN_FICHIER'
+'use client';
+import { useEffect, useState, useTransition } from 'react';
+import Neige from './Neige';
+import { reveler } from '@/app/tresors-actions';
+import { VISUEL_CARTE_GRAND_TRESOR, type Lot } from '@/lib/tresors/types';
+
+type Phase = 'saisie' | 'compte' | 'ouverture' | 'revele';
+
+export default function Revelation() {
+  const [numero, setNumero] = useState('');
+  const [code, setCode] = useState('');
+  const [erreur, setErreur] = useState('');
+  const [phase, setPhase] = useState<Phase>('saisie');
+  const [compteur, setCompteur] = useState(3);
+  const [lot, setLot] = useState<Lot | null>(null);
+  const [prenom, setPrenom] = useState('');
+  const [deja, setDeja] = useState(false);
+  const [pending, start] = useTransition();
+
+  function ouvrir() {
+    start(async () => {
+      const r = await reveler(numero, code);
+      if (r.erreur || !r.lot) { setErreur(r.erreur ?? 'Erreur.'); return; }
+      setErreur(''); setLot(r.lot); setPrenom(r.prenom ?? ''); setDeja(!!r.dejaRevelee);
+      setCompteur(3); setPhase('compte');
+    });
+  }
+
+  useEffect(() => {
+    if (phase !== 'compte') return;
+    if (compteur === 0) { setPhase('ouverture'); return; }
+    const t = setTimeout(() => setCompteur((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, compteur]);
+
+  useEffect(() => {
+    if (phase !== 'ouverture') return;
+    const t = setTimeout(() => setPhase('revele'), 1600);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  function recommencer() { setPhase('saisie'); setNumero(''); setCode(''); setLot(null); }
+
+  return (
+    <main className={`tdn-revelation${lot?.grand && phase === 'revele' ? ' tdn-grand' : ''}`}>
+      <div className="tdn-etoiles" aria-hidden="true" />
+      <Neige flocons={60} />
+
+      {phase === 'saisie' && (
+        <div className="tdn-rev-inner">
+          <div className="tdn-sur tdn-sur-grand">Marché de Noël de Limetz-Villez</div>
+          <h1 className="tdn-rev-titre">La Salle aux Trésors</h1>
+          <p className="tdn-rev-sous">Entrez votre clé pour découvrir votre cadeau.</p>
+          <div className="tdn-rev-form">
+            <div className="tdn-champ tdn-champ-grand"><label htmlFor="num">Numéro de clé</label>
+              <input id="num" inputMode="numeric" placeholder="084" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus /></div>
+            <div className="tdn-champ tdn-champ-grand"><label htmlFor="code">Code secret</label>
+              <input id="code" placeholder="NOEL-XXXX" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && ouvrir()} autoCapitalize="characters" /></div>
+            {erreur && <p className="tdn-erreur" role="alert">{erreur}</p>}
+            <button className="tdn-btn tdn-btn-or tdn-btn-xl" onClick={ouvrir} disabled={!numero || !code || pending}>{pending ? 'Vérification…' : 'Ouvrir mon trésor'}</button>
+          </div>
+        </div>
+      )}
+
+      {(phase === 'compte' || phase === 'ouverture') && (
+        <div className="tdn-rev-inner tdn-rev-scene">
+          <div className={`tdn-coffre tdn-coffre-xl${phase === 'ouverture' ? ' ouvert' : ''}`} aria-hidden="true">
+            <i className="tdn-coffre-couvercle" /><i className="tdn-coffre-corps" /><i className="tdn-coffre-lueur" />
+          </div>
+          {phase === 'compte' && <div className="tdn-decompte" key={compteur} aria-live="assertive">{compteur || '✦'}</div>}
+        </div>
+      )}
+
+      {phase === 'revele' && lot && (
+        <div className="tdn-rev-inner tdn-rev-resultat">
+          <div className="tdn-particules" aria-hidden="true">
+            {Array.from({ length: 24 }).map((_, i) => <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 6) * 0.15}s` }} />)}
+          </div>
+          {lot.grand && <div className="tdn-grand-tresor">Grand Trésor</div>}
+          <h1 className="tdn-rev-titre">Félicitations{prenom ? `, ${prenom}` : ''} !</h1>
+          <p className="tdn-rev-sous">Vous remportez :</p>
+          {lot.grand && VISUEL_CARTE_GRAND_TRESOR ? (
+            // Carte du grand trésor : la photo de la carte à côté du nom du lot.
+            <div className="tdn-lot tdn-lot-visuel">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="tdn-lot-photo" src={VISUEL_CARTE_GRAND_TRESOR} alt="" />
+              <span>{lot.nom}</span>
+            </div>
+          ) : (
+            <div className="tdn-lot">{lot.nom}</div>
+          )}
+          {lot.tdn_partenaires?.nom && <p className="tdn-rev-partenaire">Offert par notre partenaire <b>{lot.tdn_partenaires.nom}</b></p>}
+          {deja && <p className="tdn-erreur" style={{ display: 'inline-block' }}>Cette clé avait déjà été révélée.</p>}
+          <p className="tdn-muted">Présentez cet écran aux bénévoles pour récupérer votre lot.</p>
+          <button className="tdn-btn tdn-btn-ghost" onClick={recommencer}>Clé suivante</button>
+        </div>
+      )}
+    </main>
+  );
+}
+EOF_PN_FICHIER
+echo "  ✓ src/components/tresors/Revelation.tsx"
+mkdir -p 'src/lib/tresors'
+cat > 'src/lib/tresors/types.ts' <<'EOF_PN_FICHIER'
+/** Types du module « Les Trésors de Noël » — miroir des tables tdn_* */
+
+export type Categorie = 'adulte' | 'enfant';
+
+export type Reglages = {
+  id: 1;
+  titre: string;
+  accroche: string;
+  periode_texte: string;
+  marche_texte: string;
+  duree_texte: string;
+  tarif_adulte_centimes: number;
+  tarif_enfant_centimes: number;
+  inscriptions_ouvertes: boolean;
+  jeu_actif: boolean;
+  places_max: number;
+  jeu_debut: string | null;
+  jeu_fin: string | null;
+  /** Montant unitaire affiché d'un lot du grand trésor, ex. « 100 € ». */
+  grand_tresor_montant: string;
+  grand_tresor_texte: string;
+  /** Nombre de lots du grand trésor. Pour l'affichage public, il est recalculé d'après le stock des lots marqués « grand ». */
+  grand_tresor_nombre: number;
+  lieu_revelation: string;
+  /** Colonnes de l'ancien tirage séparé du grand trésor : plus utilisées (tirage unique à la révélation). */
+  tirage_cle_id: string | null;
+  tirage_cle_ids: string[] | null;
+  tirage_le: string | null;
+  module_actif: boolean;
+};
+
+export type Partenaire = { id: string; nom: string; type: string | null };
+
+export type Lot = {
+  id: string;
+  nom: string;
+  valeur: string | null;
+  partenaire_id: string | null;
+  stock: number;
+  grand: boolean;
+  position: number;
+  /** Jointure éventuelle */
+  tdn_partenaires?: { nom: string } | null;
+};
+
+export type Bloc =
+  | { type: 'texte'; contenu: string }
+  | { type: 'image'; src: string; alt: string; legende?: string }
+  | { type: 'audio'; titre: string; duree: string }
+  | { type: 'video'; titre: string; duree: string };
+
+export type QuestionType = 'texte' | 'code' | 'choix';
+
+export type Mission = {
+  id: string;
+  numero: number;
+  titre: string;
+  lieu: string | null;
+  accroche: string | null;
+  blocs: Bloc[];
+  question_type: QuestionType;
+  intitule: string;
+  reponses: string[];
+  options: string[];
+  bonne_reponse: number | null;
+  longueur: number | null;
+  placeholder: string | null;
+  indices: string[];
+  solution_secours: string | null;
+  publie: boolean;
+};
+
+/** Mission telle qu'envoyée au navigateur : sans les réponses. */
+export type MissionPublique = Omit<Mission, 'reponses' | 'bonne_reponse'>;
+
+export type Compte = {
+  id: string;
+  token: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  telephone: string | null;
+};
+
+export type Participant = {
+  id: string;
+  compte_id: string;
+  prenom: string;
+  categorie: Categorie;
+  paye: boolean;
+};
+
+export type Cle = {
+  id: string;
+  participant_id: string;
+  numero: number;
+  code: string;
+  lot_id: string | null;
+  revelee_le: string | null;
+};
+
+export type Commande = {
+  id: string;
+  compte_id: string;
+  reference: string;
+  checkout_id: string | null;
+  montant_centimes: number;
+  participant_ids: string[];
+  statut: 'en_attente' | 'payee' | 'echouee' | 'expiree';
+  paye_le: string | null;
+};
+
+export type Stats = {
+  inscrits: number;
+  ca_centimes: number;
+  commences: number;
+  termines: number;
+  cles_generees: number;
+  cles_revelees: number;
+};
+
+/** Progression d'un participant, calculée côté serveur. */
+export type Progression = {
+  participant: Participant;
+  missionsValidees: string[];   // ids de missions
+  cle: Cle | null;
+};
+
+export const numeroCle = (n: number) => String(n).padStart(3, '0');
+
+/* ---------- Grand trésor : plusieurs lots identiques, mêlés aux autres lots à la révélation ---------- */
+
+/** Visuel de la carte cadeau du grand trésor (fichier de /public) : hotte de l'accueil et écran de révélation. Mettre '' pour ne plus l'afficher. */
+export const VISUEL_CARTE_GRAND_TRESOR = '/tresors/carte-cadeau.webp';
+
+/** Nombre de lots du grand trésor (1 au minimum, même si la colonne n'existe pas encore en base). */
+export const nombreGrandTresor = (r: { grand_tresor_nombre?: number | null }) => Math.max(1, Math.floor(Number(r.grand_tresor_nombre)) || 1);
+
+/** Montant affiché : « 3 × 100 € » s'il y a plusieurs lots, « 100 € » sinon (espaces insécables). */
+export const montantGrandTresor = (r: { grand_tresor_nombre?: number | null; grand_tresor_montant: string }) => {
+  const n = nombreGrandTresor(r);
+  const unitaire = (r.grand_tresor_montant ?? '').replace(/ /g, '\u00a0');
+  return n > 1 ? `${n}\u00a0×\u00a0${unitaire}` : unitaire;
+};
+
+const NOMBRES = ['zéro', 'une', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix'];
+/** Petit nombre en toutes lettres, accordé au féminin (« une carte », « trois clés »). */
+export const enLettres = (n: number) => NOMBRES[n] ?? String(n);
+EOF_PN_FICHIER
+echo "  ✓ src/lib/tresors/types.ts"
+
+git add -A && git commit -m "Trésors de Noël : photo de la carte cadeau sur l'écran de révélation, bouton Clé suivante espacé" && git push
+vercel --prod
