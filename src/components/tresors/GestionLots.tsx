@@ -21,7 +21,7 @@ function FormLot({ lot, partenaires, onFin }: { lot: Lot | null; partenaires: Pa
         <div className="field"><label>Stock</label><input name="stock" type="number" min={0} defaultValue={lot?.stock ?? 1} /></div>
         <div className="field"><label>Position</label><input name="position" type="number" defaultValue={lot?.position ?? 0} /></div>
         <label className="field" style={{ display: 'flex', gap: '.6rem', alignItems: 'center', marginTop: '1.4rem' }}>
-          <input type="checkbox" name="grand" defaultChecked={lot?.grand ?? false} style={{ width: 'auto' }} /> Grand trésor (attribution manuelle)
+          <input type="checkbox" name="grand" defaultChecked={lot?.grand ?? false} style={{ width: 'auto' }} /> Grand trésor (hors révélation, tirage au sort dédié)
         </label>
       </div>
       <div style={{ display: 'flex', gap: '.5rem' }}>

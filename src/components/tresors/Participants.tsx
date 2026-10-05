@@ -9,9 +9,13 @@ type Props = { progressions: Progression[]; actifId: string | null; nbMissions: 
 
 export default function Participants({ progressions, actifId, nbMissions, tarifAdulte, tarifEnfant, inscriptionsOuvertes }: Props) {
   const [etat, action, pending] = useActionState<Etat, FormData>(ajouterParticipant, null);
-  const [categorie, setCategorie] = useState<Categorie>('enfant');
+  // Règle : au moins un adulte sur le compte pour pouvoir ajouter des enfants (revérifiée côté serveur).
+  const aUnAdulte = progressions.some((p) => p.participant.categorie === 'adulte');
+  const [choix, setCategorie] = useState<Categorie>(aUnAdulte ? 'enfant' : 'adulte');
+  const categorie: Categorie = aUnAdulte ? choix : 'adulte';
   const [, start] = useTransition();
   const [erreurPaiement, setErreurPaiement] = useState('');
+  const [erreurRetrait, setErreurRetrait] = useState('');
   const nonPayes = progressions.filter((p) => !p.participant.paye);
   const montant = nonPayes.reduce((s, p) => s + (p.participant.categorie === 'adulte' ? tarifAdulte : tarifEnfant), 0);
 
@@ -34,12 +38,13 @@ export default function Participants({ progressions, actifId, nbMissions, tarifA
                 {actif && <span className="tdn-pastille">Actif</span>}
               </button>
               {!p.paye && (
-                <button type="button" className="tdn-suppr" aria-label={`Retirer ${p.prenom}`} onClick={() => start(() => supprimerParticipant(p.id))}>✕</button>
+                <button type="button" className="tdn-suppr" aria-label={`Retirer ${p.prenom}`} onClick={() => start(async () => { const r = await supprimerParticipant(p.id); setErreurRetrait(r?.erreur ?? ''); })}>✕</button>
               )}
             </li>
           );
         })}
       </ul>
+      {erreurRetrait && <p className="tdn-erreur" role="alert">{erreurRetrait}</p>}
 
       {nonPayes.length > 0 && (
         <div className="tdn-indice" style={{ marginTop: '1rem' }}>
@@ -65,9 +70,11 @@ export default function Participants({ progressions, actifId, nbMissions, tarifA
             </div>
             <div className="tdn-toggle">
               <button type="button" className={categorie === 'adulte' ? 'on' : ''} onClick={() => setCategorie('adulte')}>Adulte</button>
-              <button type="button" className={categorie === 'enfant' ? 'on' : ''} onClick={() => setCategorie('enfant')}>Enfant</button>
+              <button type="button" className={categorie === 'enfant' ? 'on' : ''} disabled={!aUnAdulte}
+                title={aUnAdulte ? undefined : 'Ajoutez d’abord un adulte'} onClick={() => setCategorie('enfant')}>Enfant</button>
             </div>
           </div>
+          {!aUnAdulte && <p className="tdn-regle-adulte"><b>Au moins un adulte</b> doit être inscrit pour pouvoir ajouter des enfants.</p>}
           <button className="tdn-btn tdn-btn-ghost" disabled={pending}>+ Ajouter ({euros(categorie === 'adulte' ? tarifAdulte : tarifEnfant)})</button>
         </form>
       )}

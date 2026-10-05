@@ -5,7 +5,7 @@ import type { Reglages } from '@/lib/tresors/types';
 
 const ETAPES = [
   { n: 1, t: 'Je crée mon compte', d: 'Un responsable, une adresse e-mail.' },
-  { n: 2, t: "J'inscris les participants", d: 'Adultes et enfants, autant que vous voulez.' },
+  { n: 2, t: "J'inscris les participants", d: 'Adultes et enfants. Au moins un adulte inscrit pour inscrire des enfants.' },
   { n: 3, t: 'Je règle les participations', d: 'Paiement sécurisé en ligne.' },
   { n: 4, t: 'Je résous les énigmes dans le village', d: 'Les missions, ensemble ou séparément.' },
   { n: 5, t: 'Je récupère ma clé virtuelle', d: 'Une clé unique par participant.' },

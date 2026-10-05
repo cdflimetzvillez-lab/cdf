@@ -4,7 +4,7 @@ import Village from './Village';
 import Traineau from './Traineau';
 import Hotte from './Hotte';
 import { euros } from '@/lib/sumup';
-import type { Reglages } from '@/lib/tresors/types';
+import { enLettres, montantGrandTresor, nombreGrandTresor, type Reglages } from '@/lib/tresors/types';
 
 const dateLongue = (iso: string | null) => iso ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' }).format(new Date(iso)) : '';
 
@@ -13,6 +13,9 @@ export default function LandingReservation({ reglages: r, connecte, placesRestan
   const complet = placesRestantes <= 0;
   const pct = r.places_max > 0 ? Math.round((placesRestantes / r.places_max) * 100) : 0;
   const debut = dateLongue(r.jeu_debut);
+  // Grand trésor : un ou plusieurs lots identiques, une clé gagnante par lot.
+  const nbGrand = nombreGrandTresor(r);
+  const montantGrand = montantGrandTresor(r);
 
   const cta = connecte
     ? <Link href="/tresors-de-noel/compte" className="tdn-btn tdn-btn-or">Voir mon compte</Link>
@@ -46,11 +49,15 @@ export default function LandingReservation({ reglages: r, connecte, placesRestan
       </section>
 
       <section className="tdn-section tdn-tresor" id="tresor">
-        <Hotte className="tdn-hotte" etiquette={r.grand_tresor_montant} />
+        <Hotte className="tdn-hotte" etiquette={montantGrand} />
         <h2 className="tdn-h2">Le grand trésor</h2>
         <p className="tdn-quoi">{r.grand_tresor_texte}</p>
-        <div className="tdn-montant">{r.grand_tresor_montant}</div>
-        <p className="tdn-comment">Il se cache dans l&apos;une des clés remises lors de la révélation. Toutes les clés ouvrent un trésor : l&apos;une d&apos;elles ouvre celui-là.</p>
+        <div className={`tdn-montant${nbGrand > 1 ? ' tdn-montant-multi' : ''}`}>{montantGrand}</div>
+        {nbGrand > 1 ? (
+          <p className="tdn-comment">Il se cache dans {enLettres(nbGrand)} des clés remises lors de la révélation. Toutes les clés ouvrent un trésor : {enLettres(nbGrand)} d&apos;entre elles, tirées au sort, ouvrent celui-là.</p>
+        ) : (
+          <p className="tdn-comment">Il se cache dans l&apos;une des clés remises lors de la révélation. Toutes les clés ouvrent un trésor : l&apos;une d&apos;elles ouvre celui-là.</p>
+        )}
         <p className="tdn-autres">…et de nombreux autres lots, un pour chaque participant qui termine l&apos;aventure.</p>
       </section>
 
@@ -92,7 +99,7 @@ export default function LandingReservation({ reglages: r, connecte, placesRestan
           <div className="tdn-barre" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
           <div className="tdn-cta" style={{ marginTop: '1.4rem' }}>{cta}</div>
           <p className="tdn-muted tdn-mini tdn-centre-txt" style={{ marginTop: '1rem' }}>
-            Un compte pour toute la famille, une clé et un trésor par participant. Les participations financent les lots et l&apos;organisation du Comité des Fêtes.
+            Un compte pour toute la famille, une clé et un trésor par participant. Au moins un adulte doit être inscrit pour pouvoir inscrire des enfants. Les participations financent les lots et l&apos;organisation du Comité des Fêtes.
             {' '}<Link href="/tresors-de-noel/reglement" className="tdn-lien">Règlement du jeu</Link>
           </p>
         </div>

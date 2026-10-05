@@ -6,7 +6,10 @@ import type { Categorie } from '@/lib/tresors/types';
 
 type Ligne = { id: number; prenom: string; categorie: Categorie };
 
-/** Inscription en 3 écrans dans un seul formulaire : responsable → participants → récapitulatif/paiement. */
+/**
+ * Inscription en 3 écrans dans un seul formulaire : responsable → participants → récapitulatif/paiement.
+ * Règle : au moins un adulte inscrit pour pouvoir inscrire des enfants (revérifiée côté serveur).
+ */
 export default function FormInscription({ tarifAdulte, tarifEnfant }: { tarifAdulte: number; tarifEnfant: number }) {
   const [etat, action, pending] = useActionState<Etat, FormData>(inscrire, null);
   const [etape, setEtape] = useState(1);
@@ -15,7 +18,10 @@ export default function FormInscription({ tarifAdulte, tarifEnfant }: { tarifAdu
   const tarif = (c: Categorie) => (c === 'adulte' ? tarifAdulte : tarifEnfant);
   const total = lignes.reduce((s, l) => s + tarif(l.categorie), 0);
   const respOk = resp.prenom && resp.nom && resp.email.includes('@');
-  const lignesOk = lignes.length > 0 && lignes.every((l) => l.prenom.trim());
+  const nbAdultes = lignes.filter((l) => l.categorie === 'adulte').length;
+  /** Le dernier adulte de la liste ne peut ni passer en « enfant » ni être retiré. */
+  const seulAdulte = (l: Ligne) => l.categorie === 'adulte' && nbAdultes === 1;
+  const lignesOk = lignes.length > 0 && nbAdultes >= 1 && lignes.every((l) => l.prenom.trim());
   const maj = (id: number, patch: Partial<Ligne>) => setLignes((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
 
   return (
@@ -40,6 +46,7 @@ export default function FormInscription({ tarifAdulte, tarifEnfant }: { tarifAdu
       <section className="tdn-carte" hidden={etape !== 2}>
         <h2>Les participants</h2>
         <p className="tdn-muted">Chaque participant reçoit sa propre clé à la fin. Adulte {euros(tarifAdulte)}, enfant {euros(tarifEnfant)}.</p>
+        <p className="tdn-regle-adulte"><b>Au moins un adulte</b> doit être inscrit pour pouvoir inscrire des enfants.</p>
         {lignes.map((l, i) => (
           <div key={l.id} className="tdn-ligne-part">
             <div className="tdn-champ" style={{ flex: 1 }}>
@@ -49,9 +56,13 @@ export default function FormInscription({ tarifAdulte, tarifEnfant }: { tarifAdu
             </div>
             <div className="tdn-toggle" role="radiogroup" aria-label="Catégorie">
               <button type="button" className={l.categorie === 'adulte' ? 'on' : ''} onClick={() => maj(l.id, { categorie: 'adulte' })}>Adulte</button>
-              <button type="button" className={l.categorie === 'enfant' ? 'on' : ''} onClick={() => maj(l.id, { categorie: 'enfant' })}>Enfant</button>
+              <button type="button" className={l.categorie === 'enfant' ? 'on' : ''} disabled={seulAdulte(l)}
+                title={seulAdulte(l) ? 'Au moins un adulte doit être inscrit' : undefined} onClick={() => maj(l.id, { categorie: 'enfant' })}>Enfant</button>
             </div>
-            {lignes.length > 1 && <button type="button" className="tdn-suppr" aria-label="Supprimer" onClick={() => setLignes((ls) => ls.filter((x) => x.id !== l.id))}>✕</button>}
+            {lignes.length > 1 && (
+              <button type="button" className="tdn-suppr" aria-label="Supprimer" disabled={seulAdulte(l)}
+                title={seulAdulte(l) ? 'Au moins un adulte doit être inscrit' : undefined} onClick={() => setLignes((ls) => ls.filter((x) => x.id !== l.id))}>✕</button>
+            )}
           </div>
         ))}
         <button type="button" className="tdn-btn tdn-btn-ghost" onClick={() => setLignes((ls) => [...ls, { id: Date.now(), prenom: '', categorie: 'enfant' }])}>+ Ajouter un participant</button>

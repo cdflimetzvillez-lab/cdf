@@ -1,5 +1,6 @@
 'use server';
 
+import { randomInt } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -8,7 +9,7 @@ import { requireAdmin } from '@/lib/supabase/server';
 import { creerCheckout, lireCheckout } from '@/lib/sumup';
 import { COOKIE_ACTIF, COOKIE_TOKEN, compteCourant, jeuOuvert, lireMissions, lireReglages, placesPrises } from '@/lib/tresors/db';
 import type { Categorie, Cle, Lot, Mission, Bloc } from '@/lib/tresors/types';
-import { numeroCle } from '@/lib/tresors/types';
+import { clesTirees, nombreGrandTresor } from '@/lib/tresors/types';
 
 export type Etat = { ok?: string; erreur?: string } | null;
 
@@ -26,6 +27,20 @@ function genererCode() {
   let s = '';
   for (let i = 0; i < 4; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
   return `NOEL-${s}`;
+}
+
+/* Règle d'inscription : aucun enfant sans au moins un adulte inscrit sur le même compte. */
+const MSG_ADULTE = 'Au moins un adulte doit être inscrit pour pouvoir inscrire des enfants.';
+const estAdulte = (p: { categorie: string }) => p.categorie === 'adulte';
+const estEnfant = (p: { categorie: string }) => p.categorie !== 'adulte';
+
+/** Le compte compte-t-il déjà un adulte ? (payeSeulement : uniquement ceux dont la participation est réglée) */
+async function compteAUnAdulte(compteId: string, payeSeulement = false) {
+  const db = createAdminClient();
+  let req = db.from('tdn_participants').select('id', { count: 'exact', head: true }).eq('compte_id', compteId).eq('categorie', 'adulte');
+  if (payeSeulement) req = req.eq('paye', true);
+  const { count } = await req;
+  return (count ?? 0) > 0;
 }
 
 function referenceCommande() {
@@ -51,14 +66,18 @@ export async function inscrire(_prev: Etat, fd: FormData): Promise<Etat> {
   if (!emailValide(email)) return { erreur: 'Adresse e-mail invalide.' };
   const lignes = prenoms.map((p, i) => ({ prenom: p, categorie: categories[i] === 'adulte' ? 'adulte' : 'enfant' as Categorie })).filter((l) => l.prenom);
   if (lignes.length === 0) return { erreur: 'Ajoutez au moins un participant.' };
+
+  // Compte : réutilise celui du cookie si présent, sinon il sera créé plus bas.
+  const existant = await compteCourant();
+  // Pas d'enfant sans adulte : un adulte dans cette inscription, ou déjà réglé sur le compte.
+  if (lignes.some(estEnfant) && !lignes.some(estAdulte) && !(existant && (await compteAUnAdulte(existant.id, true)))) return { erreur: MSG_ADULTE };
+
   const restantes = reglages.places_max - (await placesPrises());
   if (restantes <= 0) return { erreur: 'Complet : toutes les places ont été réservées.' };
   if (lignes.length > restantes) return { erreur: `Il ne reste que ${restantes} place${restantes > 1 ? 's' : ''}. Réduisez le nombre de participants.` };
 
   const db = createAdminClient();
 
-  // Compte : réutilise celui du cookie si présent, sinon crée.
-  const existant = await compteCourant();
   let compteId: string;
   if (existant) {
     compteId = existant.id;
@@ -145,6 +164,10 @@ export async function payerEnAttente(): Promise<Etat> {
   const db = createAdminClient();
   const { data: parts } = await db.from('tdn_participants').select('id, categorie').eq('compte_id', compte.id).eq('paye', false);
   if (!parts || parts.length === 0) return { erreur: 'Rien à payer.' };
+  // Pas d'enfant sans adulte : un adulte dans ce paiement, ou déjà réglé sur le compte.
+  if (parts.some(estEnfant) && !parts.some(estAdulte) && !(await compteAUnAdulte(compte.id, true))) {
+    return { erreur: `${MSG_ADULTE} Ajoutez un adulte avant de régler.` };
+  }
   const restantes = reglages.places_max - (await placesPrises());
   if (parts.length > restantes) return { erreur: restantes <= 0 ? 'Complet : toutes les places ont été réservées.' : `Il ne reste que ${restantes} place${restantes > 1 ? 's' : ''}.` };
   const montant = parts.reduce((s, p) => s + (p.categorie === 'adulte' ? reglages.tarif_adulte_centimes : reglages.tarif_enfant_centimes), 0);
@@ -211,19 +234,31 @@ export async function ajouterParticipant(_prev: Etat, fd: FormData): Promise<Eta
   const prenom = String(fd.get('prenom') ?? '').trim();
   const categorie: Categorie = fd.get('categorie') === 'adulte' ? 'adulte' : 'enfant';
   if (!prenom) return { erreur: 'Prénom obligatoire.' };
+  if (categorie === 'enfant' && !(await compteAUnAdulte(compte.id))) return { erreur: `${MSG_ADULTE} Ajoutez d’abord un adulte.` };
   const db = createAdminClient();
   await db.from('tdn_participants').insert({ compte_id: compte.id, prenom, categorie, paye: false });
   revalidatePath('/tresors-de-noel', 'layout');
   return { ok: `${prenom} ajouté. Réglez sa participation pour l’activer.` };
 }
 
-export async function supprimerParticipant(id: string) {
+export async function supprimerParticipant(id: string): Promise<Etat> {
   const compte = await compteCourant();
-  if (!compte) return;
+  if (!compte) return { erreur: 'Non connecté.' };
   const db = createAdminClient();
+  const { data: parts } = await db.from('tdn_participants').select('id, categorie, paye').eq('compte_id', compte.id);
+  const cible = (parts ?? []).find((p) => p.id === id);
   // On ne supprime que les participants non payés du compte courant.
+  if (!cible || cible.paye) return null;
+  // Le dernier adulte ne peut pas être retiré tant que des enfants attendent leur inscription.
+  if (estAdulte(cible)) {
+    const autres = (parts ?? []).filter((p) => p.id !== id);
+    if (autres.some((p) => estEnfant(p) && !p.paye) && !autres.some(estAdulte)) {
+      return { erreur: 'Impossible de retirer le seul adulte tant que des enfants sont inscrits. Retirez d’abord les enfants, ou ajoutez un autre adulte.' };
+    }
+  }
   await db.from('tdn_participants').delete().eq('id', id).eq('compte_id', compte.id).eq('paye', false);
   revalidatePath('/tresors-de-noel', 'layout');
+  return null;
 }
 
 /* =========================================================
@@ -337,11 +372,12 @@ export async function majReglagesTdn(_prev: Etat, fd: FormData): Promise<Etat> {
     places_max: Math.max(0, Number(fd.get('places_max') ?? 300)),
     jeu_debut: isoParisTdn(String(fd.get('jeu_debut') ?? '')),
     jeu_fin: isoParisTdn(String(fd.get('jeu_fin') ?? '')),
+    grand_tresor_nombre: Math.min(50, Math.max(1, Math.round(Number(fd.get('grand_tresor_nombre') ?? 1)) || 1)),
     grand_tresor_montant: String(fd.get('grand_tresor_montant') ?? '').trim(),
     grand_tresor_texte: String(fd.get('grand_tresor_texte') ?? '').trim(),
     lieu_revelation: String(fd.get('lieu_revelation') ?? '').trim(),
   }).eq('id', 1);
-  if (error) return { erreur: error.message };
+  if (error) return { erreur: /grand_tresor_nombre/.test(error.message) ? 'Colonne manquante : exécutez supabase/tresors_v2.sql dans Supabase, puis réessayez.' : error.message };
   chemins();
   return { ok: 'Réglages enregistrés.' };
 }
@@ -445,48 +481,80 @@ export async function supprimerParticipantAdmin(id: string) {
   chemins();
 }
 
-export { numeroCle };
-
 
 /* =========================================================
    TIRAGE DU GRAND TRÉSOR (écran admin)
    ========================================================= */
-export type ResultatTirage = { ok: true; cleId: string; numero: number; prenom: string; famille: string; deja: boolean } | { ok: false; erreur: string };
+export type Gagnant = { cleId: string; numero: number; prenom: string; famille: string };
+export type ResultatTirage = { ok: true; gagnants: Gagnant[]; deja: boolean } | { ok: false; erreur: string };
 
-/** Tire au sort une clé parmi toutes les clés générées, attribue le lot « grand trésor » et verrouille le résultat. */
+const SQL_MANQUANT = 'Réglages du tirage illisibles : exécutez supabase/tresors_v2.sql dans Supabase, puis réessayez.';
+
+/** Détail des clés gagnantes, dans l'ordre du tirage. */
+async function lireGagnants(ids: string[]): Promise<Gagnant[]> {
+  if (ids.length === 0) return [];
+  const db = createAdminClient();
+  const { data } = await db.from('tdn_cles').select('id, numero, tdn_participants(prenom, tdn_comptes(prenom, nom))').in('id', ids);
+  const parId = new Map((data ?? []).map((c) => [c.id as string, c]));
+  return ids.flatMap((id) => {
+    const c = parId.get(id);
+    if (!c) return [];
+    const p = c.tdn_participants as unknown as { prenom: string; tdn_comptes: { prenom: string; nom: string } | null } | null;
+    return [{ cleId: c.id as string, numero: c.numero as number, prenom: p?.prenom ?? '', famille: p?.tdn_comptes ? `${p.tdn_comptes.prenom} ${p.tdn_comptes.nom}` : '' }];
+  });
+}
+
+/**
+ * Tire au sort les clés gagnantes du grand trésor (autant que de lots, réglage « grand_tresor_nombre »),
+ * parmi toutes les clés générées. Les clés sont toutes différentes : une clé ne gagne qu'un seul lot.
+ * Le résultat est enregistré et verrouillé ; un second appel renvoie le même résultat.
+ */
 export async function tirerGrandTresor(): Promise<ResultatTirage> {
   await admin();
   const db = createAdminClient();
-  const { data: r } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single();
-  const lireGagnant = async (id: string) => {
-    const { data: c } = await db.from('tdn_cles').select('id, numero, tdn_participants(prenom, tdn_comptes(prenom, nom))').eq('id', id).single();
-    const p = c?.tdn_participants as unknown as { prenom: string; tdn_comptes: { prenom: string; nom: string } | null } | null;
-    return { cleId: c!.id, numero: c!.numero, prenom: p?.prenom ?? '', famille: p?.tdn_comptes ? `${p.tdn_comptes.prenom} ${p.tdn_comptes.nom}` : '' };
-  };
-  if (r?.tirage_cle_id) return { ok: true, ...(await lireGagnant(r.tirage_cle_id)), deja: true };
+  const { data: r } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
+  if (!r) return { ok: false, erreur: SQL_MANQUANT };
+  const dejaTirees = clesTirees(r);
+  if (dejaTirees.length > 0) return { ok: true, gagnants: await lireGagnants(dejaTirees), deja: true };
 
   const { data: cles } = await db.from('tdn_cles').select('id');
   if (!cles || cles.length === 0) return { ok: false, erreur: 'Aucune clé générée : personne n’a terminé le jeu.' };
   const { data: grand } = await db.from('tdn_lots').select('id').eq('grand', true).order('position').limit(1).maybeSingle();
   if (!grand) return { ok: false, erreur: 'Aucun lot marqué « grand trésor » dans les lots.' };
 
-  const gagnante = cles[Math.floor(Math.random() * cles.length)];
-  const maintenant = new Date().toISOString();
+  // Mélange de Fisher-Yates partiel avec l'aléa cryptographique du serveur : N clés distinctes.
+  const ids = cles.map((c) => c.id as string);
+  const nombre = Math.min(nombreGrandTresor(r), ids.length);
+  for (let i = 0; i < nombre; i++) {
+    const j = i + randomInt(ids.length - i);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  const gagnantes = ids.slice(0, nombre);
+
   // Verrou : on n’écrit que si aucun tirage n’a été enregistré entre-temps.
-  const { data: maj } = await db.from('tdn_reglages').update({ tirage_cle_id: gagnante.id, tirage_le: maintenant }).eq('id', 1).is('tirage_cle_id', null).select('tirage_cle_id').maybeSingle();
-  if (!maj) { const { data: r2 } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single(); return { ok: true, ...(await lireGagnant(r2!.tirage_cle_id!)), deja: true }; }
-  await db.from('tdn_cles').update({ lot_id: grand.id }).eq('id', gagnante.id);
+  const { data: maj, error } = await db.from('tdn_reglages')
+    .update({ tirage_cle_id: gagnantes[0], tirage_cle_ids: gagnantes, tirage_le: new Date().toISOString() })
+    .eq('id', 1).is('tirage_cle_id', null).select('tirage_cle_id').maybeSingle();
+  if (error) { console.error('[tirerGrandTresor]', error); return { ok: false, erreur: SQL_MANQUANT }; }
+  if (!maj) {
+    const { data: r2 } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
+    return { ok: true, gagnants: await lireGagnants(clesTirees(r2)), deja: true };
+  }
+  await db.from('tdn_cles').update({ lot_id: grand.id }).in('id', gagnantes);
   chemins();
-  return { ok: true, ...(await lireGagnant(gagnante.id)), deja: false };
+  return { ok: true, gagnants: await lireGagnants(gagnantes), deja: false };
 }
 
-/** Annule le tirage (retire le grand trésor de la clé) pour pouvoir le relancer. */
+/** Annule le tirage (retire le grand trésor des clés gagnantes) pour pouvoir le relancer. */
 export async function annulerTirage() {
   await admin();
   const db = createAdminClient();
-  const { data: r } = await db.from('tdn_reglages').select('tirage_cle_id').eq('id', 1).single();
-  if (r?.tirage_cle_id) await db.from('tdn_cles').update({ lot_id: null, revelee_le: null }).eq('id', r.tirage_cle_id);
-  await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_le: null }).eq('id', 1);
+  const { data: r } = await db.from('tdn_reglages').select('*').eq('id', 1).single();
+  const ids = clesTirees(r);
+  if (ids.length > 0) await db.from('tdn_cles').update({ lot_id: null, revelee_le: null }).in('id', ids);
+  const { error } = await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_cle_ids: [], tirage_le: null }).eq('id', 1);
+  // Base pas encore migrée (colonne tirage_cle_ids absente) : on libère au moins l'ancien verrou.
+  if (error) await db.from('tdn_reglages').update({ tirage_cle_id: null, tirage_le: null }).eq('id', 1);
   chemins();
 }
 

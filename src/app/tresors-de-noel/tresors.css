@@ -180,9 +180,14 @@
 .tdn-toggle{display:flex;border:2px solid rgba(255,255,255,.18);border-radius:12px;overflow:hidden;margin-bottom:.9rem;}
 .tdn-toggle button{background:transparent;border:none;color:var(--tdn-muted);padding:0 .9rem;min-height:3.25rem;cursor:pointer;font-weight:600;}
 .tdn-toggle button.on{background:var(--tdn-or);color:var(--tdn-nuit);}
+.tdn-toggle button:disabled{opacity:.35;cursor:not-allowed;}
 .tdn-suppr{flex:0 0 2.6rem;height:3.25rem;margin-bottom:.9rem;background:transparent;border:2px solid rgba(255,255,255,.18);
   border-radius:12px;color:var(--tdn-muted);cursor:pointer;font-size:1rem;}
 .tdn-suppr:hover{border-color:var(--tdn-bordeaux);color:#f0a0ae;}
+.tdn-suppr:disabled{opacity:.3;cursor:not-allowed;border-color:rgba(255,255,255,.18);color:var(--tdn-muted);}
+/* Règle « au moins un adulte pour inscrire des enfants » */
+.tdn-regle-adulte{margin:.2rem 0 1rem;padding:.6rem .8rem;border-left:3px solid var(--tdn-or);border-radius:0 10px 10px 0;background:rgba(229,192,123,.1);font-size:.88rem;color:var(--tdn-texte);}
+.tdn-regle-adulte b{color:var(--tdn-or);}
 .tdn-recap{list-style:none;padding:0;margin:1rem 0;}
 .tdn-recap li{display:flex;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid rgba(255,255,255,.1);}
 .tdn-recap small{color:var(--tdn-muted);}
@@ -380,6 +385,7 @@
   background:radial-gradient(circle,rgba(229,192,123,.35),rgba(229,192,123,.08) 45%,transparent 68%);}
 .tdn-coffre-fixe .tdn-coffre{position:relative;width:170px;height:125px;}
 .tdn-montant{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(4.5rem,16vw,9rem);line-height:1.1;color:var(--tdn-creme);text-shadow:0 0 50px rgba(229,192,123,.55);margin:.2rem 0 .4rem;}
+.tdn-montant-multi{font-size:clamp(3.8rem,14vw,9rem);white-space:nowrap;}
 .tdn-hotte{width:min(100%,420px);height:auto;display:block;margin:0 auto .4rem;}
 .tdn-quoi{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.5rem;color:var(--tdn-creme);margin-top:.4rem;}
 .tdn-comment{margin:1.2rem auto 0;max-width:46ch;color:var(--tdn-muted);}
@@ -430,3 +436,23 @@
 .tdn-gagnant-num{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:clamp(3rem,12vw,9rem);line-height:1;color:var(--tdn-creme);text-shadow:0 0 50px rgba(229,192,123,.6);}
 .tdn-gagnant-nom{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.6rem,4vw,3rem);color:var(--tdn-or);margin-top:.3rem;}
 .tdn-gagnant-famille{color:var(--tdn-muted);font-size:clamp(1rem,2vw,1.4rem);}
+
+
+/* ---------- Tirage : plusieurs lots, un gagnant dévoilé après l'autre ---------- */
+.tdn-tirage-etape{font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.2em;font-size:clamp(.8rem,1.5vw,1.15rem);
+  color:var(--tdn-nuit);background:var(--tdn-or);padding:.45rem 1.1rem;border-radius:999px;margin-bottom:1.2rem;}
+.tdn-cle-tuile.tiree{border-color:var(--tdn-or);background:rgba(229,192,123,.16);color:var(--tdn-or);opacity:.6;}
+.tdn-gagnant-lot{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.3rem,3vw,2.2rem);color:var(--tdn-creme);margin-top:.4rem;}
+.tdn-gagnant-rang{font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.18em;font-size:clamp(.7rem,1.1vw,.9rem);color:var(--tdn-or);margin-bottom:.5rem;}
+.tdn-podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.2rem;width:100%;max-width:72rem;margin:1.4rem 0 1.6rem;}
+.tdn-podium .tdn-gagnant{margin:0;padding:1.5rem 1rem;box-shadow:0 0 60px rgba(229,192,123,.35);}
+.tdn-podium .tdn-gagnant-num{font-size:clamp(2.2rem,5vw,4.6rem);}
+.tdn-podium .tdn-gagnant-nom{font-size:clamp(1.4rem,2.6vw,2.3rem);}
+.tdn-podium .tdn-gagnant-famille{font-size:clamp(.9rem,1.4vw,1.15rem);}
+.tdn-lot.tdn-lot-recap{font-size:clamp(1.4rem,3.2vw,2.6rem);max-width:none;padding:1rem 1.6rem;margin-bottom:1rem;color:var(--tdn-or);border-color:var(--tdn-or);}
+.tdn-podium ~ .tdn-rev-sous{margin-bottom:1.2rem;}
+/* Présentation et récapitulatif peuvent dépasser l'écran (portable, mobile) : on les laisse défiler
+   au lieu de les rogner, pour que les boutons restent toujours atteignables. */
+.tdn-tirage.defile{height:100svh;min-height:0;overflow-y:auto;align-items:flex-start;}
+.tdn-tirage.defile .tdn-tirage-inner{margin:auto 0;}
+@media (max-width:700px){.tdn-tirage.defile{padding-top:4.5rem;}}

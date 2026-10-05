@@ -1,5 +1,9 @@
 /** Hotte du Père Noël débordant de cadeaux, avec son halo intégré (rien ne déborde du SVG). */
 export default function Hotte({ className = '', etiquette = '' }: { className?: string; etiquette?: string }) {
+  // Étiquette courte (« 300 € ») ou large (« 3 × 100 € ») : le rectangle s'élargit vers la gauche du sac.
+  const large = etiquette.length > 6;
+  const x = large ? 208 : 236;
+  const largeur = 288 - x;
   return (
     <svg className={className} viewBox="0 0 400 320" aria-hidden="true">
       <defs>
@@ -33,7 +37,11 @@ export default function Hotte({ className = '', etiquette = '' }: { className?: 
       {/* plis */}
       <path d="M150 200 Q 160 250 150 290 M250 200 Q 240 250 250 290" fill="none" stroke="#4d1420" strokeWidth="2" opacity=".6" />
       {/* étiquette */}
-      <g transform="rotate(8 262 232)"><rect x="236" y="216" width="52" height="30" rx="3" fill="#fbf7ef" /><circle cx="243" cy="231" r="3" fill="#8a2a3a" /><text x="264" y="236" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="17" fontWeight="700" fill="#8a2a3a">{etiquette}</text></g>
+      <g transform={`rotate(8 ${x + largeur / 2} 232)`}>
+        <rect x={x} y="216" width={largeur} height="30" rx="3" fill="#fbf7ef" /><circle cx={x + 7} cy="231" r="3" fill="#8a2a3a" />
+        <text x={x + largeur / 2 + (large ? 5 : 2)} y="236" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize={large ? 16 : 17} fontWeight="700" fill="#8a2a3a"
+          textLength={etiquette.length > 10 ? largeur - 18 : undefined} lengthAdjust="spacingAndGlyphs">{etiquette}</text>
+      </g>
       {/* scintillements */}
       <g fill="#fbf7ef"><path d="M70 90 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" /><path d="M330 60 l2.5 6.5 6.5 2.5 -6.5 2.5 -2.5 6.5 -2.5 -6.5 -6.5 -2.5 6.5 -2.5z" /><path d="M320 200 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" /></g>
     </svg>

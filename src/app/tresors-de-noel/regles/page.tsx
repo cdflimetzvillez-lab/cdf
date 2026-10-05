@@ -10,7 +10,7 @@ export default async function PageRegles() {
   const REGLES = [
     { t: 'Le principe', d: `${n} missions vous attendent dans le village. À chaque lieu, une énigme à résoudre sur votre téléphone. Une bonne réponse débloque la mission suivante.` },
     { t: 'Quand jouer ?', d: `${r.periode_texte}, à toute heure. Le parcours est prévu pour ${r.duree_texte.toLowerCase()}, mais vous pouvez le faire en plusieurs fois : votre progression est sauvegardée.` },
-    { t: 'En famille ou entre amis', d: "Chaque participant est inscrit individuellement, mais vous jouez ensemble sur un seul téléphone. Le responsable valide une mission pour tous les participants présents d'un coup." },
+    { t: 'En famille ou entre amis', d: "Chaque participant est inscrit individuellement, mais vous jouez ensemble sur un seul téléphone. Le responsable valide une mission pour tous les participants présents d'un coup. Au moins un adulte doit être inscrit sur le compte pour pouvoir inscrire des enfants." },
     { t: 'La clé virtuelle', d: `Quand un participant termine les ${n} missions, une clé unique est créée dans son compte : un numéro et un code secret. Gardez-la précieusement.` },
     { t: 'Le Marché de Noël', d: `${r.marche_texte}. Rendez-vous à la Salle aux Trésors : saisissez votre clé sur le grand écran et découvrez votre lot. Chaque participant ayant terminé repart avec un trésor.` },
     { t: 'Les indices', d: "Bloqué ? Chaque mission propose des indices, puis une solution de secours. Aucune pénalité : l'important est de terminer." },

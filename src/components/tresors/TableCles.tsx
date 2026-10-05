@@ -1,7 +1,7 @@
 'use client';
 import { useTransition } from 'react';
-import { majCle, numeroCle } from '@/app/tresors-actions';
-import type { Lot } from '@/lib/tresors/types';
+import { majCle } from '@/app/tresors-actions';
+import { numeroCle, type Lot } from '@/lib/tresors/types';
 
 type Ligne = { id: string; numero: number; code: string; prenom: string; famille: string; lot_id: string | null; lot: string; revelee: boolean };
 

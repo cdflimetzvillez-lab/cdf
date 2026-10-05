@@ -4,6 +4,7 @@ import Entete from '@/components/tresors/Entete';
 import { createClient } from '@/lib/supabase/server';
 import { dateFr, lireLots, lireMissions, lireReglages } from '@/lib/tresors/db';
 import { euros } from '@/lib/sumup';
+import { enLettres, nombreGrandTresor } from '@/lib/tresors/types';
 import type { SiteSettings } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Règlement · Les Trésors de Noël de Limetz-Villez' };
@@ -16,7 +17,9 @@ export default async function PageReglementTdn() {
   const s = settings as SiteSettings;
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cdf-limetzvillez.fr';
   const nbMissions = missions.length || 12;
-  const grandLibelle = `un bon d'achat multi-enseignes unique d'une valeur de ${r.grand_tresor_montant}, utilisable dans l'ensemble des enseignes partenaires de l'émetteur`;
+  // Grand trésor : une ou plusieurs cartes cadeaux identiques, une clé gagnante par carte.
+  const nbGrand = nombreGrandTresor(r);
+  const nbGrandTexte = `${enLettres(nbGrand)} (${nbGrand})`;
   // Regroupe les lots par nom (évite les doublons) et additionne les stocks.
   const autresLots = Object.values(
     lots.filter((l) => !l.grand).reduce<Record<string, { nom: string; partenaire: string | null; quantite: number }>>((acc, l) => {
@@ -41,12 +44,12 @@ export default async function PageReglementTdn() {
       <p>Les inscriptions sont ouvertes avant le début du Jeu et peuvent se poursuivre pendant celui-ci, dans la limite des places disponibles. L&apos;Organisateur se réserve le droit d&apos;écourter, de prolonger, de suspendre ou d&apos;annuler le Jeu, notamment en cas de force majeure, d&apos;intempéries rendant le parcours dangereux ou de dysfonctionnement technique majeur. Dans ce cas, les participants seront informés par e-mail et les participations remboursées si le Jeu ne peut avoir lieu.</p>
 
       <h2>Article 3 · Conditions de participation</h2>
-      <p>Le Jeu est ouvert à toute personne physique. Les mineurs participent sous la responsabilité et avec l&apos;accord d&apos;un représentant légal, qui crée le compte et effectue l&apos;inscription. Les mineurs de moins de 12 ans doivent être accompagnés d&apos;un adulte pendant tout le parcours.</p>
+      <p>Le Jeu est ouvert à toute personne physique. Les mineurs participent sous la responsabilité et avec l&apos;accord d&apos;un représentant légal, qui crée le compte et effectue l&apos;inscription. Les mineurs de moins de 12 ans doivent être accompagnés d&apos;un adulte pendant tout le parcours. <b>Aucun enfant ne peut être inscrit seul</b> : l&apos;inscription d&apos;un ou plusieurs enfants n&apos;est possible que si au moins un adulte est inscrit comme participant sur le même compte.</p>
       <p>La participation est <b>individuelle et payante</b> : chaque participant, adulte ou enfant, doit être inscrit nommément. Le tarif est de {euros(r.tarif_adulte_centimes)} par adulte et {euros(r.tarif_enfant_centimes)} par enfant (moins de 18 ans). Un même compte, géré par un responsable majeur, peut regrouper plusieurs participants d&apos;une même famille ou d&apos;un même groupe.</p>
       <p>Le nombre de participants est limité à <b>{r.places_max}</b>. Les inscriptions sont enregistrées dans l&apos;ordre des paiements validés ; une fois ce nombre atteint, les inscriptions sont closes. Les membres du bureau de l&apos;Organisateur et les personnes ayant participé à la conception des énigmes ne peuvent pas participer.</p>
 
       <h2>Article 4 · Inscription et paiement</h2>
-      <p>L&apos;inscription s&apos;effectue en ligne. Le responsable renseigne ses coordonnées (prénom, nom, adresse e-mail, téléphone facultatif), inscrit les participants (prénom, catégorie adulte ou enfant) et règle le montant total par carte bancaire via le prestataire de paiement SumUp. L&apos;Organisateur n&apos;a jamais accès aux données bancaires.</p>
+      <p>L&apos;inscription s&apos;effectue en ligne. Le responsable renseigne ses coordonnées (prénom, nom, adresse e-mail, téléphone facultatif), inscrit les participants (prénom, catégorie adulte ou enfant ; au moins un adulte dès lors qu&apos;un enfant est inscrit) et règle le montant total par carte bancaire via le prestataire de paiement SumUp. L&apos;Organisateur n&apos;a jamais accès aux données bancaires.</p>
       <p>L&apos;inscription est définitive à réception du paiement. Un e-mail de confirmation est envoyé au responsable. Conformément à l&apos;article L221-28 du Code de la consommation, les prestations de loisirs fournies à une date déterminée ne sont pas soumises au droit de rétractation : <b>aucun remboursement</b> n&apos;est effectué en cas de désistement, de non-participation ou d&apos;abandon en cours de Jeu, sauf annulation du Jeu par l&apos;Organisateur.</p>
       <p>Les sommes perçues financent les lots et l&apos;organisation de l&apos;événement.</p>
 
@@ -58,7 +61,11 @@ export default async function PageReglementTdn() {
 
       <h2>Article 6 · Dotations</h2>
       <p><b>Chaque participant ayant obtenu sa clé virtuelle reçoit un lot</b>, dans les conditions de l&apos;article 7. Les lots sont attribués par tirage au sort informatique au moment de la révélation, parmi les lots disponibles, à l&apos;exception du grand trésor.</p>
-      <p>Le <b>grand trésor</b> est {grandLibelle}. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu, et révélé lors de la cérémonie de révélation.</p>
+      {nbGrand > 1 ? (
+        <p>Le <b>grand trésor</b> est composé de <b>{nbGrandTexte} cartes cadeaux multi-enseignes d&apos;une valeur unitaire de {r.grand_tresor_montant}</b>, utilisables dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu : {nbGrandTexte} clés différentes sont tirées au sort et chacune remporte une carte cadeau. Une même clé ne peut remporter qu&apos;une seule carte ; plusieurs clés d&apos;un même compte peuvent en revanche être tirées au sort. Les clés gagnantes sont révélées lors de la cérémonie de révélation.</p>
+      ) : (
+        <p>Le <b>grand trésor</b> est une carte cadeau multi-enseignes d&apos;une valeur de {r.grand_tresor_montant}, utilisable dans l&apos;ensemble des enseignes partenaires de l&apos;émetteur. Il est attribué par tirage au sort, effectué sous le contrôle de l&apos;Organisateur, parmi l&apos;ensemble des clés virtuelles générées avant la clôture du Jeu, et révélé lors de la cérémonie de révélation.</p>
+      )}
       <p>Les autres lots mis en jeu sont les suivants, dans la limite des quantités indiquées :</p>
       <ul className="tdn-reglement-lots">
         {autresLots.map((l) => <li key={l.nom}><b>{l.nom}</b>{l.partenaire && ` (offert par ${l.partenaire})`} : {l.quantite} exemplaire{l.quantite > 1 ? 's' : ''}</li>)}

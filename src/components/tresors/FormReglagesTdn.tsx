@@ -1,7 +1,7 @@
 'use client';
 import { useActionState } from 'react';
 import { majReglagesTdn, type Etat } from '@/app/tresors-actions';
-import type { Reglages } from '@/lib/tresors/types';
+import { nombreGrandTresor, type Reglages } from '@/lib/tresors/types';
 
 function local(iso: string | null) {
   if (!iso) return '';
@@ -46,10 +46,12 @@ export default function FormReglagesTdn({ r }: { r: Reglages }) {
       </div>
       <div className="panel">
         <h2>Grand trésor et révélation</h2>
-        <div className="row2">
-          <div className="field"><label htmlFor="grand_tresor_montant">Montant affiché</label><input id="grand_tresor_montant" name="grand_tresor_montant" defaultValue={r.grand_tresor_montant} /></div>
-          <div className="field"><label htmlFor="grand_tresor_texte">Description</label><input id="grand_tresor_texte" name="grand_tresor_texte" defaultValue={r.grand_tresor_texte} /></div>
+        <div className="row3">
+          <div className="field"><label htmlFor="grand_tresor_nombre">Nombre de lots (gagnants tirés au sort)</label><input id="grand_tresor_nombre" name="grand_tresor_nombre" type="number" min={1} max={50} step={1} defaultValue={nombreGrandTresor(r)} /></div>
+          <div className="field"><label htmlFor="grand_tresor_montant">Montant d&apos;un lot</label><input id="grand_tresor_montant" name="grand_tresor_montant" defaultValue={r.grand_tresor_montant} placeholder="100 €" /></div>
+          <div className="field"><label htmlFor="grand_tresor_texte">Description</label><input id="grand_tresor_texte" name="grand_tresor_texte" defaultValue={r.grand_tresor_texte} placeholder="3 cartes cadeaux multi-enseignes" /></div>
         </div>
+        <p style={{ color: '#6b6560', fontSize: '.85rem', marginBottom: '1rem' }}>Exemple : 3 lots à 100 € s&apos;affichent « 3 × 100 € » sur la page du jeu, et le tirage désigne 3 clés gagnantes différentes.</p>
         <div className="field"><label htmlFor="lieu_revelation">Lieu de la révélation (règlement)</label><input id="lieu_revelation" name="lieu_revelation" defaultValue={r.lieu_revelation} /></div>
       </div>
       <button className="btn btn-k" disabled={pending}>{pending ? 'Enregistrement…' : 'Enregistrer'}</button>

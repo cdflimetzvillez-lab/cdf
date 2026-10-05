@@ -16,7 +16,7 @@ export default async function AdminLots() {
   }
   return (
     <>
-      <div className="adm-h"><div><h1>Lots et partenaires</h1><p>Les lots sont attribués au moment de la révélation, dans la limite du stock. Le « grand trésor » ne se tire pas au sort : attribuez-le à une clé depuis l&apos;onglet Clés.</p></div></div>
+      <div className="adm-h"><div><h1>Lots et partenaires</h1><p>Les lots sont attribués au moment de la révélation, dans la limite du stock. Le « grand trésor » n&apos;est pas distribué à la révélation : ses gagnants sont tirés au sort depuis l&apos;onglet Clés (nombre de lots dans les Réglages).</p></div></div>
       <GestionLots lots={(lots ?? []) as Lot[]} partenaires={(partenaires ?? []) as Partenaire[]} compte={compte} />
     </>
   );

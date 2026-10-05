@@ -1,6 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { marquerPaye, supprimerParticipantAdmin, numeroCle } from '@/app/tresors-actions';
+import { marquerPaye, supprimerParticipantAdmin } from '@/app/tresors-actions';
+import { numeroCle } from '@/lib/tresors/types';
 
 type Ligne = { id: string; prenom: string; categorie: string; paye: boolean; responsable: string; email: string; telephone: string; progression: number; cle: number | null; statut: string };
 
