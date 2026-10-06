@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition, type FormEvent } from 'react';
 import Link from 'next/link';
 import { enregistrerMission, supprimerMission, type Etat } from '@/app/tresors-actions';
 import type { Bloc, Mission, QuestionType } from '@/lib/tresors/types';
@@ -15,12 +15,28 @@ export default function EditeurMission({ mission: m, numeroSuivant }: { mission:
   const [etat, action, pending] = useActionState<Etat, FormData>(enregistrerMission, null);
   const [type, setType] = useState<QuestionType>(m?.question_type ?? 'texte');
   const [blocs, setBlocs] = useState<Bloc[]>(m?.blocs ?? [{ type: 'texte', contenu: '' }]);
+  // Choix multiple : options et numéro de la bonne option (affiché à partir de 1, enregistré à partir de 0).
+  const [options, setOptions] = useState((m?.options ?? []).join('\n'));
+  const [bonne, setBonne] = useState(String((m?.bonne_reponse ?? 0) + 1));
+  const [, startTransition] = useTransition();
+
+  const listeOptions = options.split('\n').map((o) => o.trim()).filter(Boolean);
+  const indexBonne = Math.max(0, (Math.floor(Number(bonne)) || 1) - 1);
+  const optionChoisie = listeOptions[indexBonne];
+
+  // Envoi manuel : avec <form action>, React 19 remet le formulaire à zéro après l'enregistrement
+  // (le type de question et les champs revenaient à leur ancienne valeur à l'écran).
+  function envoyer(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(() => action(fd));
+  }
 
   const majBloc = (i: number, patch: Partial<Bloc>) => setBlocs((bs) => bs.map((b, j) => (j === i ? { ...b, ...patch } as Bloc : b)));
   const bouger = (i: number, d: -1 | 1) => setBlocs((bs) => { const c = [...bs]; const j = i + d; if (j < 0 || j >= c.length) return bs; [c[i], c[j]] = [c[j], c[i]]; return c; });
 
   return (
-    <form action={action}>
+    <form onSubmit={envoyer}>
       <input type="hidden" name="id" value={m?.id ?? ''} />
       <input type="hidden" name="blocs" value={JSON.stringify(blocs)} />
       <div className="adm-h">
@@ -107,11 +123,13 @@ export default function EditeurMission({ mission: m, numeroSuivant }: { mission:
         {type === 'choix' && (
           <div className="row2">
             <div className="field"><label htmlFor="options">Options (une par ligne)</label>
-              <textarea id="options" name="options" rows={4} defaultValue={(m?.options ?? []).join('\n')} /></div>
-            <div className="field"><label htmlFor="bonne_reponse">Numéro de la bonne option (1 = première ligne)</label>
-              <input id="bonne_reponse" name="bonne_reponse_1" type="number" min={1} defaultValue={(m?.bonne_reponse ?? 0) + 1}
-                onChange={(e) => { const h = e.currentTarget.form?.elements.namedItem('bonne_reponse') as HTMLInputElement; if (h) h.value = String(Number(e.target.value) - 1); }} />
-              <input type="hidden" name="bonne_reponse" defaultValue={m?.bonne_reponse ?? 0} /></div>
+              <textarea id="options" name="options" rows={4} value={options} onChange={(e) => setOptions(e.target.value)} /></div>
+            <div className="field"><label htmlFor="bonne_option">Numéro de la bonne option (1 = première ligne)</label>
+              <input id="bonne_option" type="number" min={1} max={Math.max(listeOptions.length, 1)} value={bonne} onChange={(e) => setBonne(e.target.value)} />
+              <input type="hidden" name="bonne_reponse" value={indexBonne} />
+              <p style={{ marginTop: '.5rem', fontSize: '.85rem', color: optionChoisie ? '#1a7f37' : '#b42318' }}>
+                {optionChoisie ? `Bonne réponse : ${optionChoisie}` : 'Aucune option ne correspond à ce numéro.'}
+              </p></div>
           </div>
         )}
       </div>
