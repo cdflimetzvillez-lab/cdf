@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import BlocMission from './BlocMission';
 import Indices from './Indices';
+import LutinFarceur from './LutinFarceur';
 import { validerReponse } from '@/app/tresors-actions';
 import type { MissionPublique, Progression } from '@/lib/tresors/types';
 
 /** Mission générique : contenu, question, validation multi-participants (côté serveur), indices.
- *  Après une bonne réponse, « Continuer » renvoie sur la carte avec ?bravo=N pour y jouer l'animation. */
+ *  Après une bonne réponse : le lutin farceur (LutinFarceur), puis « Continuer » renvoie sur la carte
+ *  avec ?bravo=N pour y jouer l'avancée du lutin. */
 export default function Mission({ mission: m, progressions, actifId }: { mission: MissionPublique; progressions: Progression[]; actifId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -38,13 +40,9 @@ export default function Mission({ mission: m, progressions, actifId }: { mission
 
   if (reussi) {
     return (
-      <section className="tdn-carte tdn-reussite">
-        <div className="tdn-eclat" aria-hidden="true">✦</div>
-        <h2 className="tdn-titre-fee">Mission accomplie !</h2>
-        <p>{aTermine ? 'Vous venez de résoudre le dernier mystère…' : 'Vous avez débloqué la mission suivante.'}</p>
-        <p className="tdn-muted tdn-mini">Validée pour : {progressions.filter((p) => selection.includes(p.participant.id)).map((p) => p.participant.prenom).join(', ')}</p>
-        <button className="tdn-btn tdn-btn-or tdn-btn-large" onClick={() => router.push(aTermine ? '/tresors-de-noel/fin' : `/tresors-de-noel/aventure?bravo=${m.numero}`)}>Continuer</button>
-      </section>
+      <LutinFarceur numero={m.numero} dernier={aTermine}
+        validePour={progressions.filter((p) => selection.includes(p.participant.id)).map((p) => p.participant.prenom)}
+        onContinuer={() => router.push(aTermine ? '/tresors-de-noel/fin' : `/tresors-de-noel/aventure?bravo=${m.numero}`)} />
     );
   }
 

@@ -582,3 +582,48 @@
   78%,100%{transform:translate(0,0)}
 }
 @media (prefers-reduced-motion:reduce){.tdn-map-traineau,.tdn-map .m-flocon{display:none;}}
+
+/* =========================================================
+   MISSION ACCOMPLIE — le lutin farceur (.tdn-farce, composant LutinFarceur.tsx)
+   Il surgit de derrière une congère, lance une boule de neige qui s'écrase sur l'écran, puis éclate de rire.
+   Une seule séquence de 3 s ; l'état de repos de chaque élément est l'état final.
+   ========================================================= */
+.tdn-farce{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;display:flex;
+  padding:1.5rem 1.2rem calc(1.5rem + env(safe-area-inset-bottom));
+  background:radial-gradient(ellipse at 50% 28%,var(--tdn-nuit-3),var(--tdn-nuit) 72%);}
+.tdn-farce-inner{position:relative;z-index:2;width:100%;max-width:24rem;margin:auto;text-align:center;animation:tdn-farce-choc 3s linear both;}
+.tdn-farce-scene{position:relative;width:min(64vw,15rem);margin:0 auto;}
+.tdn-farce-lutin{display:block;width:100%;height:auto;}
+.tdn-farce-corps{animation:tdn-farce-surgir .7s cubic-bezier(.3,1.3,.5,1) .15s both;}
+.tdn-farce-rire{animation:tdn-farce-rire .24s ease-in-out 1.45s 10 alternate,tdn-farce-repos 1.3s ease-in-out 3.9s infinite alternate;}
+.tdn-farce-tete{transform-box:fill-box;transform-origin:50% 100%;animation:tdn-farce-tete .55s ease-in-out 1.45s infinite alternate;}
+.tdn-farce-bras{transform-box:fill-box;transform-origin:0 0;animation:tdn-farce-lancer 3s ease-in-out both;}
+.tdn-farce-boule-main{opacity:0;animation:tdn-farce-main 3s linear both;}
+.tdn-farce-avant{opacity:0;animation:tdn-farce-avant 3s linear both;}
+.tdn-farce-apres{animation:tdn-farce-apres 3s linear both;}
+.tdn-farce-boule{position:absolute;left:79%;top:66%;width:11%;aspect-ratio:1;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,#fff,#dbe6fb);transform:translate(-50%,-50%);animation:tdn-farce-vol 3s ease-in both;}
+.tdn-farce-splat{position:absolute;left:50%;top:34%;width:135%;max-width:none;z-index:3;opacity:0;pointer-events:none;
+  transform:translate(-50%,-50%);filter:drop-shadow(0 6px 0 rgba(8,20,48,.25));animation:tdn-farce-splat 3s ease-out both;}
+.tdn-farce-bulle{position:absolute;right:76%;top:12%;padding:.45rem .8rem;border-radius:1rem 1rem .25rem 1rem;white-space:nowrap;
+  background:var(--tdn-creme);color:var(--tdn-nuit);font-weight:800;font-size:.95rem;box-shadow:0 6px 18px rgba(2,6,20,.35);
+  transform-origin:100% 100%;animation:tdn-farce-bulle .45s cubic-bezier(.3,1.5,.5,1) 1.75s both;}
+.tdn-farce-texte{margin-top:.4rem;animation:tdn-farce-texte .6s ease-out 2s both;}
+.tdn-farce-texte h2{font-size:clamp(2rem,8vw,2.6rem);color:var(--tdn-or);text-shadow:0 0 30px rgba(229,192,123,.4);margin:0 0 .5rem;}
+.tdn-farce-texte p{margin:.3rem 0;}
+@keyframes tdn-farce-surgir{from{transform:translateY(172px)}to{transform:translateY(0)}}
+@keyframes tdn-farce-rire{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes tdn-farce-repos{from{transform:translateY(0)}to{transform:translateY(-2.5px)}}
+@keyframes tdn-farce-tete{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+@keyframes tdn-farce-lancer{0%,25%{transform:rotate(0)}34%{transform:rotate(-105deg)}39%{transform:rotate(35deg)}50%{transform:rotate(-12deg)}60%,100%{transform:rotate(0)}}
+@keyframes tdn-farce-main{0%,36%{opacity:1}37%,100%{opacity:0}}
+@keyframes tdn-farce-avant{0%,45%{opacity:1}47%,100%{opacity:0}}
+@keyframes tdn-farce-apres{0%,45%{opacity:0}47%,100%{opacity:1}}
+@keyframes tdn-farce-vol{0%,36%{opacity:0;transform:translate(-50%,-50%) scale(1)}37%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  46%{opacity:1;transform:translate(-310%,-330%) scale(9)}46.5%,100%{opacity:0;transform:translate(-310%,-330%) scale(9)}}
+@keyframes tdn-farce-splat{0%,45.5%{opacity:0;transform:translate(-50%,-50%) scale(.25)}47%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  50%,64%{opacity:1;transform:translate(-50%,-50%) scale(1)}86%,100%{opacity:0;transform:translate(-50%,-18%) scale(1.02)}}
+@keyframes tdn-farce-choc{0%,46%{transform:translate(0,0)}47.5%{transform:translate(-7px,5px)}49%{transform:translate(6px,-4px)}50.5%{transform:translate(-4px,2px)}52%,100%{transform:translate(0,0)}}
+@keyframes tdn-farce-bulle{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+@keyframes tdn-farce-texte{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tdn-farce *{animation-delay:0s!important;}}

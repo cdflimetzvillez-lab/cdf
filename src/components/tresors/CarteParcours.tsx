@@ -637,7 +637,7 @@ export default function CarteParcours({ etapes, faites, termine, jouable, bravo 
         );
       })}
 
-      {anime && <p className="tdn-map-bravo" role="status">Mission accomplie !</p>}
+      {anime && <p className="tdn-map-bravo" role="status">En route !</p>}
     </>
   );
 }
