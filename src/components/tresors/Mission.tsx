@@ -7,7 +7,8 @@ import Indices from './Indices';
 import { validerReponse } from '@/app/tresors-actions';
 import type { MissionPublique, Progression } from '@/lib/tresors/types';
 
-/** Mission générique : contenu, question, validation multi-participants (côté serveur), indices. */
+/** Mission générique : contenu, question, validation multi-participants (côté serveur), indices.
+ *  Après une bonne réponse, « Continuer » renvoie sur la carte avec ?bravo=N pour y jouer l'animation. */
 export default function Mission({ mission: m, progressions, actifId }: { mission: MissionPublique; progressions: Progression[]; actifId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -42,7 +43,7 @@ export default function Mission({ mission: m, progressions, actifId }: { mission
         <h2 className="tdn-titre-fee">Mission accomplie !</h2>
         <p>{aTermine ? 'Vous venez de résoudre le dernier mystère…' : 'Vous avez débloqué la mission suivante.'}</p>
         <p className="tdn-muted tdn-mini">Validée pour : {progressions.filter((p) => selection.includes(p.participant.id)).map((p) => p.participant.prenom).join(', ')}</p>
-        <button className="tdn-btn tdn-btn-or tdn-btn-large" onClick={() => router.push(aTermine ? '/tresors-de-noel/fin' : '/tresors-de-noel/aventure')}>Continuer</button>
+        <button className="tdn-btn tdn-btn-or tdn-btn-large" onClick={() => router.push(aTermine ? '/tresors-de-noel/fin' : `/tresors-de-noel/aventure?bravo=${m.numero}`)}>Continuer</button>
       </section>
     );
   }

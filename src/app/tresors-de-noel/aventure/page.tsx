@@ -1,12 +1,19 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import Entete from '@/components/tresors/Entete';
 import NavTresors from '@/components/tresors/NavTresors';
 import SelecteurParticipant from '@/components/tresors/SelecteurParticipant';
+import CarteParcours, { type EtapeCarte } from '@/components/tresors/CarteParcours';
+import CentrerEtape from '@/components/tresors/CentrerEtape';
 import { contexteJoueur, dateFr, jeuOuvert, lireMissions, lireReglages } from '@/lib/tresors/db';
 
-export default async function PageAventure() {
-  const ctx = await contexteJoueur();
+/**
+ * « Mon aventure » : la progression est une carte du village. Le chemin relie les missions,
+ * le lutin avance d'étape en étape et le village s'illumine au fil des missions validées.
+ * ?bravo=N (posé par l'écran de mission après une bonne réponse) joue l'animation « mission accomplie ».
+ */
+export default async function PageAventure({ searchParams }: { searchParams: Promise<{ bravo?: string }> }) {
+  const [{ bravo }, ctx] = await Promise.all([searchParams, contexteJoueur()]);
   if (!ctx) redirect('/tresors-de-noel/acces');
   const [missions, r] = await Promise.all([lireMissions(), lireReglages()]);
   const actif = ctx.actif;
@@ -22,69 +29,99 @@ export default async function PageAventure() {
     );
   }
 
-  const faites = actif.missionsValidees.length;
-  const termine = missions.length > 0 && missions.every((m) => actif.missionsValidees.includes(m.id));
-  const mission = missions.find((m) => !actif.missionsValidees.includes(m.id));
+  const prenom = actif.participant.prenom;
+  const validees = new Set(actif.missionsValidees);
+  const faites = missions.filter((m) => validees.has(m.id)).length;
+  const termine = missions.length > 0 && faites === missions.length;
+  const jouable = actif.participant.paye && jeuOuvert(r);
+  const mission = missions.find((m) => !validees.has(m.id));
+
+  const etapes: EtapeCarte[] = missions.map((m) => ({
+    numero: m.numero,
+    titre: m.titre,
+    etat: validees.has(m.id) ? 'faite' : jouable && m.id === mission?.id ? 'courante' : 'verrou',
+  }));
+  const numeroBravo = Number(bravo);
+
+  // Fiche du bas : ce qu'il y a à faire maintenant.
+  let fiche: ReactNode;
+  if (!actif.participant.paye) {
+    fiche = (
+      <>
+        <div>
+          <p className="tdn-map-fnum">Paiement en attente</p>
+          <h2 className="tdn-map-ftitre">La participation de {prenom} n&apos;est pas encore réglée</h2>
+        </div>
+        <Link href="/tresors-de-noel/compte" className="tdn-map-jouer">Régler</Link>
+      </>
+    );
+  } else if (termine) {
+    fiche = (
+      <>
+        <div>
+          <p className="tdn-map-fnum">Aventure terminée</p>
+          <h2 className="tdn-map-ftitre">Le coffre est ouvert</h2>
+          <p className="tdn-map-flieu">Les {missions.length} mystères sont résolus</p>
+        </div>
+        <Link href="/tresors-de-noel/cle" className="tdn-map-jouer">Voir ma clé</Link>
+      </>
+    );
+  } else if (!jouable) {
+    const cloture = !!r.jeu_fin && new Date() > new Date(r.jeu_fin);
+    fiche = cloture ? (
+      <div>
+        <p className="tdn-map-fnum">Jeu terminé</p>
+        <h2 className="tdn-map-ftitre">L&apos;aventure s&apos;est achevée le {dateFr(r.jeu_fin)}</h2>
+      </div>
+    ) : (
+      <div>
+        <p className="tdn-map-fnum">Votre place est réservée</p>
+        <h2 className="tdn-map-ftitre">L&apos;aventure commence le {dateFr(r.jeu_debut)}</h2>
+        <p className="tdn-map-flieu">{r.periode_texte}</p>
+      </div>
+    );
+  } else if (mission) {
+    fiche = (
+      <>
+        <div>
+          <p className="tdn-map-fnum">Mission {mission.numero}</p>
+          <h2 className="tdn-map-ftitre">« {mission.titre} »</h2>
+          {mission.lieu && <p className="tdn-map-flieu">📍 {mission.lieu}</p>}
+        </div>
+        <Link href={`/tresors-de-noel/mission/${mission.numero}`} className="tdn-map-jouer">Jouer</Link>
+      </>
+    );
+  } else {
+    fiche = (
+      <div>
+        <p className="tdn-map-fnum">Bientôt</p>
+        <h2 className="tdn-map-ftitre">Les missions arrivent</h2>
+      </div>
+    );
+  }
 
   return (
-    <main className="tdn-page">
-      <Entete titre={`Bonjour ${actif.participant.prenom}`} sur="Mon aventure" />
-
-      <section className="tdn-carte tdn-progression">
-        <div className="tdn-sur">Progression</div>
-        <div className="tdn-compteur"><b>{faites}</b> / {missions.length} missions</div>
-        <div className="tdn-barre"><i style={{ width: `${(faites / Math.max(missions.length, 1)) * 100}%` }} /></div>
-        <div className="tdn-switch">
-          {ctx.progressions.length > 1 && <span className="tdn-sur">Participant actif</span>}
-          <SelecteurParticipant progressions={ctx.progressions} actifId={actif.participant.id} />
+    <main className="tdn-map-page">
+      <header className="tdn-map-entete">
+        <div className="tdn-map-ligne">
+          <h1 className="tdn-map-bonjour">Bonjour {prenom}</h1>
+          <span className="tdn-map-score" aria-label={`${faites} missions validées sur ${missions.length}`}>
+            <b aria-hidden="true">✦</b> {faites} / {missions.length}
+          </span>
         </div>
-      </section>
+        <SelecteurParticipant progressions={ctx.progressions} actifId={actif.participant.id} />
+      </header>
 
-      {!actif.participant.paye ? (
-        <section className="tdn-carte tdn-mission-carte">
-          <div className="tdn-sur">Paiement en attente</div>
-          <p>La participation de {actif.participant.prenom} n&apos;est pas encore réglée.</p>
-          <Link href="/tresors-de-noel/compte" className="tdn-btn tdn-btn-or tdn-btn-large">Régler depuis mon compte</Link>
-        </section>
-      ) : !jeuOuvert(r) ? (
-        <section className="tdn-carte tdn-mission-carte tdn-or">
-          <div className="tdn-sur">Votre place est réservée</div>
-          <h2 className="tdn-titre-fee">L&apos;aventure commence le {dateFr(r.jeu_debut)}</h2>
-          <p>Revenez ici ce jour-là : la première mission vous attendra. {r.periode_texte}.</p>
-        </section>
-      ) : termine ? (
-        <section className="tdn-carte tdn-mission-carte tdn-or">
-          <div className="tdn-sur">Aventure terminée</div>
-          <h2 className="tdn-titre-fee">Les {missions.length} mystères sont résolus</h2>
-          <p>Votre clé virtuelle vous attend.</p>
-          <Link href="/tresors-de-noel/cle" className="tdn-btn tdn-btn-nuit tdn-btn-large">Voir ma clé</Link>
-        </section>
-      ) : mission && (
-        <section className="tdn-carte tdn-mission-carte">
-          <div className="tdn-sur">Mission {mission.numero}</div>
-          <h2 className="tdn-titre-fee">« {mission.titre} »</h2>
-          {mission.lieu && <p className="tdn-lieu">📍 {mission.lieu}</p>}
-          {mission.accroche && <p>{mission.accroche}</p>}
-          <Link href={`/tresors-de-noel/mission/${mission.numero}`} className="tdn-btn tdn-btn-or tdn-btn-large">Découvrir l&apos;énigme</Link>
-        </section>
-      )}
+      <div className="tdn-map">
+        <CarteParcours etapes={etapes} faites={faites} termine={termine} jouable={jouable}
+          bravo={Number.isInteger(numeroBravo) && numeroBravo > 0 ? numeroBravo : null} />
+      </div>
 
-      <section className="tdn-carte">
-        <h2>Parcours</h2>
-        <ol className="tdn-parcours">
-          {missions.map((m) => {
-            const ok = actif.missionsValidees.includes(m.id);
-            const courante = mission?.id === m.id;
-            return (
-              <li key={m.id} className={ok ? 'ok' : courante ? 'now' : ''}>
-                <span className="tdn-etape-n">{ok ? '✓' : m.numero}</span>
-                <div><b>{m.titre}</b><small>{m.lieu}</small></div>
-                {ok && <Link href={`/tresors-de-noel/mission/${m.numero}`} className="tdn-mini-lien">Revoir</Link>}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+      <div className="tdn-map-bas">
+        <section className="tdn-map-fiche">{fiche}</section>
+      </div>
+
+      <CentrerEtape cle={`${actif.participant.id}-${faites}`} />
       <NavTresors />
     </main>
   );

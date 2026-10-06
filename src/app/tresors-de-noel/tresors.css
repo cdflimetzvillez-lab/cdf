@@ -469,3 +469,116 @@
 .tdn-tirage.defile{height:100svh;min-height:0;overflow-y:auto;align-items:flex-start;}
 .tdn-tirage.defile .tdn-tirage-inner{margin:auto 0;}
 @media (max-width:700px){.tdn-tirage.defile{padding-top:4.5rem;}}
+
+/* =========================================================
+   MON AVENTURE — carte du parcours (.tdn-map)
+   Un chemin qui serpente dans le village de nuit, une étape par mission, le lutin sur l'étape en cours.
+   Le dessin (CarteParcours.tsx) est un SVG de 360 × 800 : il suit la largeur de l'écran et la page défile.
+   En-tête et fiche de mission restent fixes par-dessus. Animations sur transform / opacity uniquement.
+   ========================================================= */
+.tdn-map-page{min-height:100svh;}
+.tdn-map{position:relative;width:100%;max-width:30rem;margin:0 auto;aspect-ratio:360/800;overflow:hidden;background:var(--tdn-nuit);}
+.tdn-map-svg{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.tdn-map-traineau{position:absolute;left:0;top:11.5%;width:37%;height:auto;overflow:visible;pointer-events:none;
+  color:rgba(251,247,239,.72);animation:tdn-map-traineau 28s linear infinite;}
+@keyframes tdn-map-traineau{0%{transform:translate(-115%,70%)}38%,100%{transform:translate(295%,-45%)}}
+.tdn-map-repere{position:absolute;width:1px;height:1px;pointer-events:none;}
+.tdn-map-lien{position:absolute;width:13%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);-webkit-tap-highlight-color:transparent;}
+.tdn-map-lien:focus-visible{outline:3px solid var(--tdn-or);outline-offset:3px;}
+
+/* En-tête, fiche et message de réussite : fixes, alignés sur la largeur de la carte. */
+.tdn-map-entete,.tdn-map-bas,.tdn-map-bravo{position:fixed;left:50%;transform:translateX(-50%);width:min(100%,30rem);z-index:30;}
+.tdn-map-entete{top:0;padding:calc(1.1rem + env(safe-area-inset-top)) 1rem 1.9rem;pointer-events:none;
+  background:linear-gradient(#040b22 0%,rgba(4,11,34,.93) 52%,rgba(4,11,34,.62) 78%,rgba(4,11,34,0));}
+.tdn-map-entete > *{pointer-events:auto;}
+.tdn-map-ligne{display:flex;align-items:center;justify-content:space-between;gap:.8rem;}
+.tdn .tdn-map-bonjour{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:1.75rem;line-height:1;color:var(--tdn-creme);}
+.tdn-map-score{display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .8rem;border-radius:999px;white-space:nowrap;
+  background:rgba(8,20,48,.72);border:1px solid rgba(229,192,123,.6);color:#f6e3b8;font-weight:800;font-size:.875rem;font-variant-numeric:tabular-nums;}
+.tdn-map-score b{color:var(--tdn-or);font-weight:400;}
+.tdn-map-entete .tdn-chips{margin-top:.75rem;gap:.4rem;}
+.tdn-map-entete .tdn-chips button{min-height:2.25rem;padding:0 .9rem;font-size:.8rem;border-width:1px;background:rgba(8,20,48,.55);}
+.tdn-map-entete .tdn-chips button.on{background:var(--tdn-or);}
+
+.tdn-map-bas{bottom:calc(3.6rem + env(safe-area-inset-bottom));padding:0 .75rem .7rem;pointer-events:none;}
+.tdn-map-fiche{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:.7rem;min-height:4.9rem;
+  padding:.7rem .75rem .7rem 1.05rem;border-radius:1.4rem;background:rgba(7,17,44,.92);border:1px solid rgba(229,192,123,.42);
+  box-shadow:0 12px 30px rgba(2,6,20,.45);backdrop-filter:blur(8px);}
+.tdn-map-fiche p{margin:0;}
+.tdn-map-fnum{font-size:.75rem;font-weight:800;color:var(--tdn-or);}
+.tdn .tdn-map-ftitre{margin:0;padding:.1rem 0 .15rem;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:1.3rem;line-height:1.1;color:var(--tdn-creme);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tdn-map-flieu{font-size:.75rem;color:var(--tdn-muted);}
+.tdn .tdn-map-jouer{flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:2.9rem;padding:0 1.2rem;border-radius:999px;
+  text-decoration:none;white-space:nowrap;background:linear-gradient(135deg,#ecd08f,var(--tdn-or-2));color:var(--tdn-nuit);font-weight:800;font-size:.92rem;
+  box-shadow:0 6px 18px rgba(229,192,123,.35);}
+.tdn .tdn-map-jouer:active{transform:scale(.97);}
+
+.tdn-map-bravo{top:calc(6.2rem + env(safe-area-inset-top));margin:0;padding:.9rem 0 1.1rem;text-align:center;pointer-events:none;opacity:0;
+  font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-style:italic;font-size:2rem;color:#f8e4b2;
+  text-shadow:0 0 22px rgba(229,192,123,.75),0 2px 0 var(--tdn-nuit);
+  background:radial-gradient(ellipse 62% 70% at 50% 50%,rgba(4,11,34,.86),rgba(4,11,34,0) 72%);
+  animation:tdn-map-bravo 3.6s ease-out both;}
+@keyframes tdn-map-bravo{0%,12%{opacity:0;transform:translate(-50%,10px) scale(.94)}20%,72%{opacity:1;transform:translate(-50%,0)}86%,100%{opacity:0;transform:translate(-50%,-8px)}}
+
+/* ----- vie du village (boucles douces) ----- */
+.tdn-map .m-num{font:800 14px 'Bricolage Grotesque',system-ui,sans-serif;}
+.tdn-map .m-or{fill:none;stroke:#f2d089;stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(242,208,137,.8));}
+.tdn-map .m-etoile{animation:tdn-map-etoile 4s ease-in-out infinite alternate;}
+.tdn-map .m-fen{animation:tdn-map-fen 3.2s ease-in-out infinite alternate;}
+.tdn-map .m-guir{animation:tdn-map-guir 1.7s ease-in-out infinite alternate;}
+.tdn-map .m-fumee{opacity:0;transform-box:fill-box;transform-origin:center;animation:tdn-map-fumee 4.5s ease-out infinite;}
+.tdn-map .m-halo{transform-box:fill-box;transform-origin:center;animation:tdn-map-halo 3.4s ease-in-out infinite alternate;}
+.tdn-map .m-lanterne{animation-duration:1.9s;}
+.tdn-map .m-d1{animation-delay:0s;}
+.tdn-map .m-d2{animation-delay:-1.1s;}
+.tdn-map .m-d3{animation-delay:-2.3s;}
+.tdn-map .m-fumee.m-d2{animation-delay:-1.5s;}
+.tdn-map .m-fumee.m-d3{animation-delay:-3s;}
+.tdn-map .m-saut{animation:tdn-map-saut 1.1s ease-in-out infinite alternate;}
+.tdn-map .m-fete .m-saut{animation:tdn-map-fete .5s ease-in-out infinite alternate;}
+.tdn-map .m-onde{transform-box:fill-box;transform-origin:center;animation:tdn-map-onde 1.9s ease-out infinite;}
+.tdn-map .m-onde.m-d2{animation-delay:.95s;}
+.tdn-map .m-rayons{transform-origin:180px 198px;animation:tdn-map-rayons 5s ease-in-out infinite alternate;}
+.tdn-map .m-scint{transform-box:fill-box;transform-origin:center;animation:tdn-map-scint 1.6s ease-in-out infinite alternate;}
+.tdn-map .m-cle{animation:tdn-map-cle 1.6s ease-in-out infinite alternate;filter:drop-shadow(0 0 6px rgba(255,226,154,.9));}
+.tdn-map .m-flocon{animation:tdn-map-chute linear infinite;}
+@keyframes tdn-map-etoile{from{opacity:.35}to{opacity:1}}
+@keyframes tdn-map-fen{from{opacity:.7}to{opacity:1}}
+@keyframes tdn-map-guir{from{opacity:.3}to{opacity:1}}
+@keyframes tdn-map-fumee{0%{opacity:0;transform:translate(0,0) scale(.6)}18%{opacity:.42}100%{opacity:0;transform:translate(7px,-24px) scale(1.7)}}
+@keyframes tdn-map-halo{from{opacity:.65;transform:scale(.92)}to{opacity:1;transform:scale(1.07)}}
+@keyframes tdn-map-saut{from{transform:translateY(0)}to{transform:translateY(-3px)}}
+@keyframes tdn-map-fete{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+@keyframes tdn-map-onde{from{opacity:.95;transform:scale(1)}to{opacity:0;transform:scale(1.8)}}
+@keyframes tdn-map-rayons{from{opacity:.6;transform:rotate(-5deg)}to{opacity:1;transform:rotate(5deg)}}
+@keyframes tdn-map-scint{from{opacity:.25;transform:scale(.5)}to{opacity:1;transform:scale(1.15)}}
+@keyframes tdn-map-cle{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes tdn-map-chute{to{transform:translate(18px,830px)}}
+
+/* ----- « mission accomplie » : séquence jouée une fois à l'arrivée sur la carte (?bravo=N) -----
+   L'étape passe à l'or, le bâtiment associé s'allume, le chemin doré avance et le lutin saute à l'étape suivante.
+   L'état de repos de chaque élément est l'état final : sans animation, la carte est simplement à jour. */
+.tdn-map .m-b-avant{opacity:0;animation:tdn-map-b-avant 3.6s linear both;}
+.tdn-map .m-b-fait{animation:tdn-map-b-fait 3.6s linear both;}
+.tdn-map .m-b-allume{animation:tdn-map-b-allume 3.6s linear both;}
+.tdn-map .m-b-suivante{animation:tdn-map-b-suivante 3.6s linear both;}
+.tdn-map .m-b-eclat{opacity:0;transform-box:fill-box;transform-origin:center;animation:tdn-map-b-eclat 3.6s ease-out both;}
+.tdn-map .m-b-trace{animation:tdn-map-b-trace 3.6s ease-in-out both;}
+.tdn-map .m-b-marche{animation:tdn-map-b-marche 3.6s ease-in-out both;}
+@keyframes tdn-map-b-avant{0%,14%{opacity:1}22%,100%{opacity:0}}
+@keyframes tdn-map-b-fait{0%,14%{opacity:0}22%,100%{opacity:1}}
+@keyframes tdn-map-b-allume{0%,22%{opacity:0}46%,100%{opacity:1}}
+@keyframes tdn-map-b-suivante{0%,78%{opacity:0}88%,100%{opacity:1}}
+@keyframes tdn-map-b-eclat{0%,14%{opacity:0;transform:translateY(-6px) scale(.3)}19%{opacity:1}38%,100%{opacity:0;transform:translateY(-38px) scale(1.1)}}
+@keyframes tdn-map-b-trace{0%,32%{stroke-dasharray:var(--f0) 1}78%,100%{stroke-dasharray:var(--f1) 1}}
+@keyframes tdn-map-b-marche{
+  0%,32%{transform:translate(var(--dx),var(--dy))}
+  40%{transform:translate(calc(var(--dx)*.83),calc(var(--dy)*.83 - 9px))}
+  47%{transform:translate(calc(var(--dx)*.67),calc(var(--dy)*.67))}
+  55%{transform:translate(calc(var(--dx)*.5),calc(var(--dy)*.5 - 9px))}
+  63%{transform:translate(calc(var(--dx)*.33),calc(var(--dy)*.33))}
+  70%{transform:translate(calc(var(--dx)*.17),calc(var(--dy)*.17 - 9px))}
+  78%,100%{transform:translate(0,0)}
+}
+@media (prefers-reduced-motion:reduce){.tdn-map-traineau,.tdn-map .m-flocon{display:none;}}
