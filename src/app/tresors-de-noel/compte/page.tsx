@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation';
 import Entete from '@/components/tresors/Entete';
 import NavTresors from '@/components/tresors/NavTresors';
 import Participants from '@/components/tresors/Participants';
+import PartagerAcces from '@/components/tresors/PartagerAcces';
 import { contexteJoueur, lireMissions, lireReglages } from '@/lib/tresors/db';
+import { lienAcces } from '@/lib/tresors/lien';
 import { deconnecter } from '@/app/tresors-actions';
 
 export default async function PageCompte() {
@@ -16,6 +18,7 @@ export default async function PageCompte() {
       <Entete titre="Mon compte" sur={`${ctx.compte.prenom} ${ctx.compte.nom}`} />
       <Participants progressions={ctx.progressions} actifId={ctx.actif?.participant.id ?? null} nbMissions={missions.length}
         tarifAdulte={r.tarif_adulte_centimes} tarifEnfant={r.tarif_enfant_centimes} inscriptionsOuvertes={r.inscriptions_ouvertes} />
+      <PartagerAcces lien={lienAcces(ctx.compte.token)} titre={r.titre} />
       <section className="tdn-carte">
         <h2>Responsable</h2>
         <p>{ctx.compte.prenom} {ctx.compte.nom}</p>

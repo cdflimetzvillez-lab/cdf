@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { synchroniserCommande } from '@/app/tresors-actions';
+import PartagerAcces from '@/components/tresors/PartagerAcces';
+import { compteCourant, lireReglages } from '@/lib/tresors/db';
+import { lienAcces } from '@/lib/tresors/lien';
 import { euros } from '@/lib/sumup';
 
 export default async function PageRetour({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
@@ -10,13 +13,16 @@ export default async function PageRetour({ searchParams }: { searchParams: Promi
     return <main className="tdn-page tdn-centre"><h1 className="tdn-titre-fee">Commande introuvable</h1><Link href="/tresors-de-noel" className="tdn-btn tdn-btn-ghost">Retour</Link></main>;
   }
   if (cmd.statut === 'payee') {
+    // Le compte est connu sur le téléphone qui vient de payer : on propose tout de suite de partager l'accès.
+    const [compte, r] = await Promise.all([compteCourant(), lireReglages()]);
     return (
       <main className="tdn-page tdn-centre">
         <div className="tdn-succes">✓</div>
         <h1 className="tdn-titre-fee">Inscription confirmée</h1>
         <p className="tdn-p">{cmd.participant_ids.length} participant{cmd.participant_ids.length > 1 ? 's' : ''} inscrit{cmd.participant_ids.length > 1 ? 's' : ''} · {euros(cmd.montant_centimes)} · réf. {cmd.reference}</p>
-        <p className="tdn-p tdn-muted tdn-mini">Votre accès est enregistré sur ce téléphone. Pour le retrouver ailleurs, demandez un lien d&apos;accès par e-mail depuis la page « Retrouver mon compte ».</p>
+        <p className="tdn-p tdn-muted tdn-mini">Votre accès est enregistré sur ce téléphone. Pour jouer sur d&apos;autres téléphones, partagez le lien ci-dessous : vous le retrouverez à tout moment dans « Mon compte ».</p>
         <Link href="/tresors-de-noel/aventure" className="tdn-btn tdn-btn-or">Commencer l&apos;aventure</Link>
+        {compte && <PartagerAcces lien={lienAcces(compte.token)} titre={r.titre} />}
       </main>
     );
   }
