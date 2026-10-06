@@ -585,45 +585,210 @@
 
 /* =========================================================
    MISSION ACCOMPLIE — le lutin farceur (.tdn-farce, composant LutinFarceur.tsx)
-   Il surgit de derrière une congère, lance une boule de neige qui s'écrase sur l'écran, puis éclate de rire.
-   Une seule séquence de 3 s ; l'état de repos de chaque élément est l'état final.
+   Douze farces, une par mission : classe .f1 … .f12 sur la section. Chaque farce dure environ 3 s,
+   puis le lutin éclate de rire (--rire) et le texte avec le bouton arrivent (--texte).
+   Les animations portent sur transform / opacity et gardent leur dernier état (fill both).
    ========================================================= */
 .tdn-farce{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;display:flex;
-  padding:1.5rem 1.2rem calc(1.5rem + env(safe-area-inset-bottom));
-  background:radial-gradient(ellipse at 50% 28%,var(--tdn-nuit-3),var(--tdn-nuit) 72%);}
-.tdn-farce-inner{position:relative;z-index:2;width:100%;max-width:24rem;margin:auto;text-align:center;animation:tdn-farce-choc 3s linear both;}
-.tdn-farce-scene{position:relative;width:min(64vw,15rem);margin:0 auto;}
-.tdn-farce-lutin{display:block;width:100%;height:auto;}
-.tdn-farce-corps{animation:tdn-farce-surgir .7s cubic-bezier(.3,1.3,.5,1) .15s both;}
-.tdn-farce-rire{animation:tdn-farce-rire .24s ease-in-out 1.45s 10 alternate,tdn-farce-repos 1.3s ease-in-out 3.9s infinite alternate;}
-.tdn-farce-tete{transform-box:fill-box;transform-origin:50% 100%;animation:tdn-farce-tete .55s ease-in-out 1.45s infinite alternate;}
-.tdn-farce-bras{transform-box:fill-box;transform-origin:0 0;animation:tdn-farce-lancer 3s ease-in-out both;}
-.tdn-farce-boule-main{opacity:0;animation:tdn-farce-main 3s linear both;}
-.tdn-farce-avant{opacity:0;animation:tdn-farce-avant 3s linear both;}
-.tdn-farce-apres{animation:tdn-farce-apres 3s linear both;}
-.tdn-farce-boule{position:absolute;left:79%;top:66%;width:11%;aspect-ratio:1;border-radius:50%;opacity:0;pointer-events:none;
-  background:radial-gradient(circle at 35% 30%,#fff,#dbe6fb);transform:translate(-50%,-50%);animation:tdn-farce-vol 3s ease-in both;}
-.tdn-farce-splat{position:absolute;left:50%;top:34%;width:135%;max-width:none;z-index:3;opacity:0;pointer-events:none;
-  transform:translate(-50%,-50%);filter:drop-shadow(0 6px 0 rgba(8,20,48,.25));animation:tdn-farce-splat 3s ease-out both;}
-.tdn-farce-bulle{position:absolute;right:76%;top:12%;padding:.45rem .8rem;border-radius:1rem 1rem .25rem 1rem;white-space:nowrap;
+  padding:1rem 1.2rem calc(1.5rem + env(safe-area-inset-bottom));
+  background:radial-gradient(ellipse at 50% 28%,var(--tdn-nuit-3),var(--tdn-nuit) 72%);
+  --rire:1.4s;--texte:2s;--bd:61%;--bg:45%;--bb:66%;}
+.tdn-farce-inner{position:relative;z-index:2;width:100%;max-width:24rem;margin:auto;text-align:center;}
+.tdn-farce-scene{position:relative;left:50%;width:min(100vw,27rem);transform:translateX(-50%);}
+.tdn-farce-svg{display:block;width:100%;height:auto;}
+@media (min-width:28rem){.tdn-farce-scene{-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);}}
+.tdn-farce-bulle{position:absolute;right:var(--bd);bottom:var(--bb);padding:.45rem .8rem;border-radius:1rem 1rem .25rem 1rem;white-space:nowrap;
   background:var(--tdn-creme);color:var(--tdn-nuit);font-weight:800;font-size:.95rem;box-shadow:0 6px 18px rgba(2,6,20,.35);
-  transform-origin:100% 100%;animation:tdn-farce-bulle .45s cubic-bezier(.3,1.5,.5,1) 1.75s both;}
-.tdn-farce-texte{margin-top:.4rem;animation:tdn-farce-texte .6s ease-out 2s both;}
+  transform-origin:100% 100%;animation:lf-bulle .45s cubic-bezier(.3,1.5,.5,1) calc(var(--rire) + .3s) both;}
+.tdn-farce-texte{position:relative;margin-top:-.3rem;animation:lf-texte .6s ease-out var(--texte) both;}
 .tdn-farce-texte h2{font-size:clamp(2rem,8vw,2.6rem);color:var(--tdn-or);text-shadow:0 0 30px rgba(229,192,123,.4);margin:0 0 .5rem;}
 .tdn-farce-texte p{margin:.3rem 0;}
-@keyframes tdn-farce-surgir{from{transform:translateY(172px)}to{transform:translateY(0)}}
-@keyframes tdn-farce-rire{from{transform:translateY(0)}to{transform:translateY(-5px)}}
-@keyframes tdn-farce-repos{from{transform:translateY(0)}to{transform:translateY(-2.5px)}}
-@keyframes tdn-farce-tete{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
-@keyframes tdn-farce-lancer{0%,25%{transform:rotate(0)}34%{transform:rotate(-105deg)}39%{transform:rotate(35deg)}50%{transform:rotate(-12deg)}60%,100%{transform:rotate(0)}}
-@keyframes tdn-farce-main{0%,36%{opacity:1}37%,100%{opacity:0}}
-@keyframes tdn-farce-avant{0%,45%{opacity:1}47%,100%{opacity:0}}
-@keyframes tdn-farce-apres{0%,45%{opacity:0}47%,100%{opacity:1}}
-@keyframes tdn-farce-vol{0%,36%{opacity:0;transform:translate(-50%,-50%) scale(1)}37%{opacity:1;transform:translate(-50%,-50%) scale(1)}
-  46%{opacity:1;transform:translate(-310%,-330%) scale(9)}46.5%,100%{opacity:0;transform:translate(-310%,-330%) scale(9)}}
-@keyframes tdn-farce-splat{0%,45.5%{opacity:0;transform:translate(-50%,-50%) scale(.25)}47%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
-  50%,64%{opacity:1;transform:translate(-50%,-50%) scale(1)}86%,100%{opacity:0;transform:translate(-50%,-18%) scale(1.02)}}
-@keyframes tdn-farce-choc{0%,46%{transform:translate(0,0)}47.5%{transform:translate(-7px,5px)}49%{transform:translate(6px,-4px)}50.5%{transform:translate(-4px,2px)}52%,100%{transform:translate(0,0)}}
-@keyframes tdn-farce-bulle{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
-@keyframes tdn-farce-texte{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ----- le lutin : rire, tête qui dodeline, visage avant / après ----- */
+.tdn-farce .lf-rire{animation:lf-rire .24s ease-in-out var(--rire) 10 alternate,lf-repos 1.3s ease-in-out calc(var(--rire) + 2.5s) infinite alternate;}
+.tdn-farce .lf-tete{animation:lf-tete .55s ease-in-out var(--rire) infinite alternate;}
+.tdn-farce .lf-avant{opacity:0;animation:lf-cache .1s linear var(--rire) both;}
+.tdn-farce .lf-apres{animation:lf-montre .1s linear var(--rire) both;}
+.tdn-farce .lf-grimace{opacity:0;}
+.tdn-farce .lf-surgit{animation:lf-surgir .7s cubic-bezier(.3,1.3,.5,1) .15s both;}
+.tdn-farce .lf-guir{animation:lf-guir 1.7s ease-in-out infinite alternate;}
+.tdn-farce .lf-guir.lf-d2{animation-delay:-.6s;}
+.tdn-farce .lf-guir.lf-d3{animation-delay:-1.2s;}
+.tdn-farce .lf-eclat{opacity:0;}
+@keyframes lf-rire{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes lf-repos{from{transform:translateY(0)}to{transform:translateY(-2.5px)}}
+@keyframes lf-tete{from{transform:rotate(-4deg)}to{transform:rotate(5deg)}}
+@keyframes lf-cache{from{opacity:1}to{opacity:0}}
+@keyframes lf-montre{from{opacity:0}to{opacity:1}}
+@keyframes lf-surgir{from{transform:translateY(205px)}to{transform:translateY(0)}}
+@keyframes lf-guir{from{opacity:.35}to{opacity:1}}
+@keyframes lf-eclat{0%{opacity:0;transform:translateY(-4px) scale(.4)}15%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translateY(calc(var(--portee,44px) * -1)) scale(1.9)}}
+@keyframes lf-bulle{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+@keyframes lf-texte{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ----- 1. la boule de neige ----- */
+.f1 .lf-bras-d{animation:f1-lancer 3s ease-in-out both;}
+.f1 .f1-main{animation:f1-main 3s linear both;}
+.f1 .f1-boule{animation:f1-vol 3s ease-in both;}
+.f1 .tdn-farce-inner{animation:f1-choc 3s linear both;}
+.tdn-farce-splat{position:absolute;left:50%;top:30%;width:132%;max-width:none;z-index:3;pointer-events:none;
+  transform:translate(-50%,-50%);filter:drop-shadow(0 6px 0 rgba(8,20,48,.25));animation:f1-splat 3s ease-out both;}
+@keyframes f1-lancer{0%,25%{transform:rotate(0)}34%{transform:rotate(-105deg)}39%{transform:rotate(35deg)}50%{transform:rotate(-12deg)}60%,100%{transform:rotate(0)}}
+@keyframes f1-main{0%,36%{opacity:1}37%,100%{opacity:0}}
+@keyframes f1-vol{0%,36%{opacity:0;transform:translate(0,0) scale(1)}37%{opacity:1;transform:translate(0,0) scale(1)}46%{opacity:1;transform:translate(-50px,-44px) scale(9)}46.5%,100%{opacity:0;transform:translate(-50px,-44px) scale(9)}}
+@keyframes f1-splat{0%,45.5%{opacity:0;transform:translate(-50%,-50%) scale(.25)}47%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}50%,64%{opacity:1;transform:translate(-50%,-50%) scale(1)}86%,100%{opacity:0;transform:translate(-50%,-18%) scale(1.02)}}
+@keyframes f1-choc{0%,46%{transform:translate(0,0)}47.5%{transform:translate(-7px,5px)}49%{transform:translate(6px,-4px)}50.5%{transform:translate(-4px,2px)}52%,100%{transform:translate(0,0)}}
+
+/* ----- 2. coucou ----- */
+.tdn-farce.f2{--rire:2.05s;--texte:2.45s;}
+.f2 .f2-cache{animation:f2-cache 3s ease-in-out both;}
+@keyframes f2-cache{
+  0%,6%{opacity:1;transform:translate(-232px,-40px) rotate(75deg)}
+  12%,22%{opacity:1;transform:translate(-184px,-40px) rotate(75deg)}
+  27%{opacity:1;transform:translate(-232px,-40px) rotate(75deg)}
+  27.5%{opacity:0;transform:translate(-232px,-40px) rotate(75deg)}
+  29%{opacity:0;transform:translate(232px,-72px) rotate(-75deg)}
+  30%{opacity:1;transform:translate(232px,-72px) rotate(-75deg)}
+  36%,47%{opacity:1;transform:translate(184px,-72px) rotate(-75deg)}
+  52%{opacity:1;transform:translate(232px,-72px) rotate(-75deg)}
+  52.5%{opacity:0;transform:translate(232px,-72px) rotate(-75deg)}
+  54%{opacity:0;transform:translate(0,205px) rotate(0deg)}
+  55%{opacity:1;transform:translate(0,205px) rotate(0deg)}
+  63%{opacity:1;transform:translate(0,-12px) rotate(0deg)}
+  68%,100%{opacity:1;transform:translate(0,0) rotate(0deg)}
+}
+
+/* ----- 3. la tête en bas ----- */
+.tdn-farce.f3{--rire:1.7s;--texte:2.2s;--bg:54%;--bb:29%;}
+.f3 .f3-chute{animation:f3-chute .7s cubic-bezier(.3,1.25,.5,1) .15s both;}
+.f3 .f3-balance{animation:f3-balance 2.6s ease-in-out .75s both,f3-berce 4.4s ease-in-out 3.35s infinite;}
+@keyframes f3-chute{from{transform:translateY(-250px)}to{transform:translateY(0)}}
+@keyframes f3-balance{0%{transform:rotate(0)}12%{transform:rotate(17deg)}30%{transform:rotate(-13deg)}48%{transform:rotate(9deg)}66%{transform:rotate(-6deg)}84%{transform:rotate(3deg)}100%{transform:rotate(0)}}
+@keyframes f3-berce{0%,100%{transform:rotate(0)}25%{transform:rotate(2.5deg)}75%{transform:rotate(-2.5deg)}}
+
+/* ----- 4. le cadeau surprise ----- */
+.tdn-farce.f4{--rire:1.5s;--texte:2s;--bb:74%;}
+.f4 .f4-boite{animation:f4-boite 3s ease-in-out both;}
+.f4 .f4-couvercle{animation:f4-couvercle 3s ease-in both;}
+.f4 .f4-ressort{animation:f4-ressort 3s ease-out both;}
+.f4 .lf-eclat{--portee:62px;animation:lf-eclat .8s ease-out 1.08s both;}
+@keyframes f4-boite{0%,8%{transform:rotate(0)}12%{transform:rotate(-4deg)}16%{transform:rotate(4deg)}20%{transform:rotate(-5deg)}24%{transform:rotate(5deg)}28%{transform:rotate(-3deg)}32%,100%{transform:rotate(0)}}
+@keyframes f4-couvercle{0%,34%{opacity:1;transform:translate(0,0) rotate(0deg)}48%{opacity:1;transform:translate(74px,-118px) rotate(150deg)}58%,100%{opacity:0;transform:translate(120px,-150px) rotate(240deg)}}
+@keyframes f4-ressort{0%,35%{transform:translateY(150px)}42%{transform:translateY(-46px)}48%{transform:translateY(-14px)}54%{transform:translateY(-36px)}60%{transform:translateY(-24px)}66%,100%{transform:translateY(-28px)}}
+
+/* ----- 5. la glissade ----- */
+.tdn-farce.f5{--rire:2.05s;--texte:2.45s;--bd:20%;--bb:57%;}
+.f5 .f5-glisse{animation:f5-glisse 3s linear both;}
+.f5 .f5-chute{animation:f5-chute 3s linear both;}
+.f5 .lf-bras-d{animation:f5-moulinet .2s linear .25s 9 alternate;}
+.f5 .lf-bras-g{animation:f5-moulinet .2s linear .35s 9 alternate-reverse;}
+.f5 .lf-eclat{--portee:34px;animation:lf-eclat .6s ease-out 1.9s both;}
+@keyframes f5-glisse{0%,8%{transform:translate(-235px,0)}46%{transform:translate(6px,0)}60%{transform:translate(32px,-10px)}66%,100%{transform:translate(40px,22px)}}
+@keyframes f5-chute{0%,8%{transform:rotate(-10deg)}46%{transform:rotate(-18deg)}62%{transform:rotate(-400deg)}66%,100%{transform:rotate(-430deg)}}
+@keyframes f5-moulinet{from{transform:rotate(-30deg)}to{transform:rotate(30deg)}}
+
+/* ----- 6. le grelot ----- */
+.tdn-farce.f6{--rire:1.95s;--texte:2.35s;}
+.f6 .lf-bras-d{animation:f6-secoue 3s ease-in-out both;}
+.f6 .f6-onde{opacity:0;animation:f6-onde .42s ease-out .95s 5;}
+.f6 .f6-onde.lf-d2{animation-delay:1.02s;}
+.f6 .f6-onde.lf-d3{animation-delay:1.09s;}
+.f6 .tdn-farce-inner{animation:f6-choc 3s linear both;}
+@keyframes f6-secoue{0%,28%{transform:rotate(0)}32%{transform:rotate(-15deg)}36%{transform:rotate(12deg)}40%{transform:rotate(-15deg)}44%{transform:rotate(12deg)}48%{transform:rotate(-15deg)}52%{transform:rotate(12deg)}56%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}64%,100%{transform:rotate(0)}}
+@keyframes f6-onde{0%{opacity:0;transform:translateX(-6px)}30%{opacity:1}100%{opacity:0;transform:translateX(10px)}}
+@keyframes f6-choc{0%,31%{transform:translate(0,0)}33%{transform:translate(-4px,2px)}35%{transform:translate(4px,-2px)}37%{transform:translate(-4px,1px)}39%{transform:translate(3px,-2px)}41%{transform:translate(-4px,2px)}43%{transform:translate(4px,-1px)}45%{transform:translate(-3px,2px)}47%{transform:translate(4px,-2px)}49%{transform:translate(-4px,1px)}51%{transform:translate(3px,-1px)}53%{transform:translate(-3px,2px)}55%{transform:translate(3px,-2px)}57%{transform:translate(-2px,1px)}60%,100%{transform:translate(0,0)}}
+
+/* ----- 7. la guirlande ----- */
+.tdn-farce.f7{--rire:2s;--texte:2.4s;}
+.f7 .f7-gigote{animation:f7-gigote 3s ease-in-out both;}
+.f7 .f7-allume{animation:lf-montre .12s linear 1.62s both;}
+@keyframes f7-gigote{0%,28%{transform:rotate(0)}31%{transform:rotate(-6deg)}34%{transform:rotate(6deg)}37%{transform:rotate(-7deg)}40%{transform:rotate(7deg)}43%{transform:rotate(-6deg)}46%{transform:rotate(5deg)}50%,100%{transform:rotate(0)}}
+
+/* ----- 8. la grimace ----- */
+.tdn-farce.f8{--rire:1.76s;--texte:2.3s;}
+.f8 .f8-zoom{animation:f8-zoom 3s ease-in-out both;}
+.f8 .f8-secoue{animation:f8-secoue .16s ease-in-out 1.05s 4 alternate;}
+.f8 .lf-avant{animation:f8-avant 3s linear both;}
+.f8 .lf-grimace{animation:f8-grimace 3s linear both;}
+.f8 .lf-langue{animation:f8-langue .12s ease-in-out infinite alternate;}
+@keyframes f8-zoom{0%,6%{transform:translate(0,46px) scale(.2)}32%{transform:translate(0,24px) scale(2.5)}54%{transform:translate(0,24px) scale(2.6)}68%,100%{transform:translate(0,0) scale(1)}}
+@keyframes f8-secoue{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+@keyframes f8-avant{0%,31%{opacity:1}32%,100%{opacity:0}}
+@keyframes f8-grimace{0%,31%{opacity:0}32%,57%{opacity:1}58%,100%{opacity:0}}
+@keyframes f8-langue{from{transform:rotate(-10deg)}to{transform:rotate(10deg)}}
+
+/* ----- 9. la luge ----- */
+.tdn-farce.f9{--rire:2.1s;--texte:2.45s;--bb:70%;}
+.f9 .f9-course{animation:f9-course 3s linear both;}
+.f9 .f9-penche{animation:f9-penche 3s ease-in-out both;}
+.f9 .lf-eclat{--portee:40px;animation:lf-eclat .6s ease-out 1.9s both;}
+@keyframes f9-course{
+  0%,5%{opacity:0;transform:translate(200px,-66px) scale(.4)}
+  6%{opacity:1;transform:translate(190px,-66px) scale(.4)}
+  21%{opacity:1;transform:translate(-190px,-66px) scale(.4)}
+  22%{opacity:0;transform:translate(-190px,-66px) scale(.4)}
+  27%{opacity:0;transform:translate(-215px,-36px) scale(.64)}
+  28%{opacity:1;transform:translate(-215px,-36px) scale(.64)}
+  44%{opacity:1;transform:translate(215px,-36px) scale(.64)}
+  45%{opacity:0;transform:translate(215px,-36px) scale(.64)}
+  51%{opacity:0;transform:translate(245px,0) scale(1)}
+  52%{opacity:1;transform:translate(245px,0) scale(1)}
+  62%{opacity:1;transform:translate(30px,0) scale(1)}
+  68%,100%{opacity:1;transform:translate(0,0) scale(1)}
+}
+@keyframes f9-penche{0%,22%{transform:rotate(-8deg)}27%,45%{transform:rotate(8deg)}51%,60%{transform:rotate(-8deg)}65%{transform:rotate(13deg)}70%,100%{transform:rotate(0)}}
+
+/* ----- 10. le bonhomme de neige ----- */
+.tdn-farce.f10{--rire:1.8s;--texte:2.25s;--bd:62.5%;--bb:84%;}
+.f10 .f10-tete{animation:f10-tete 3s ease-in-out both;}
+.f10 .f10-sort{animation:f10-sort 3s ease-out both;}
+@keyframes f10-tete{0%,14%{transform:translate(0,0) rotate(0deg)}18%{transform:translate(0,0) rotate(-7deg)}22%{transform:translate(0,0) rotate(7deg)}26%{transform:translate(0,0) rotate(-5deg)}30%,34%{transform:translate(0,0) rotate(0deg)}
+  42%{transform:translate(6px,-30px) rotate(14deg)}50%{transform:translate(52px,-34px) rotate(80deg)}58%{transform:translate(86px,104px) rotate(200deg)}61%{transform:translate(90px,98px) rotate(215deg)}64%,100%{transform:translate(92px,110px) rotate(230deg)}}
+@keyframes f10-sort{0%,38%{transform:translateY(35px)}52%{transform:translateY(-76px)}58%{transform:translateY(-62px)}64%,100%{transform:translateY(-67px)}}
+
+/* ----- 11. l'avalanche ----- */
+.tdn-farce.f11{--rire:2s;--texte:2.4s;--bg:47.5%;--bb:61%;}
+.f11 .f11-arbre{animation:f11-arbre 3s ease-in-out both;}
+.f11 .lf-bras-d{animation:f11-pousse 3s ease-in-out both;}
+.f11 .f11-charge{animation:lf-cache .15s linear 1.2s both;}
+.f11 .f11-tas{animation:f11-tas 3s linear both;}
+.f11 .f11-reste{animation:lf-montre .1s linear 1.95s both;}
+.f11 .f11-ebroue{animation:f11-ebroue 3s ease-in-out both;}
+.f11 .lf-eclat{--portee:70px;animation:lf-eclat .7s ease-out 1.95s both;}
+@keyframes f11-arbre{0%,22%{transform:rotate(0)}25%{transform:rotate(3deg)}28%{transform:rotate(-3deg)}31%{transform:rotate(3.5deg)}34%{transform:rotate(-3.5deg)}37%{transform:rotate(3deg)}40%{transform:rotate(-2deg)}44%,100%{transform:rotate(0)}}
+@keyframes f11-pousse{0%,22%{transform:rotate(0)}25%{transform:rotate(-8deg)}28%{transform:rotate(6deg)}31%{transform:rotate(-8deg)}34%{transform:rotate(6deg)}37%{transform:rotate(-8deg)}40%{transform:rotate(6deg)}44%,100%{transform:rotate(22deg)}}
+@keyframes f11-tas{0%,39%{opacity:0;transform:translate(74px,-96px) scale(.3)}40%{opacity:1;transform:translate(74px,-96px) scale(.3)}49%{opacity:1;transform:translate(0,0) scale(1)}51%{opacity:1;transform:translate(0,0) scale(1.1,.88)}54%{opacity:1;transform:translate(0,0) scale(1)}
+  57%{opacity:1;transform:translate(-2px,0) scale(1)}60%{opacity:1;transform:translate(2px,0) scale(1)}63%{opacity:1;transform:translate(-2px,0) scale(1)}65%{opacity:1;transform:translate(0,0) scale(1)}72%,100%{opacity:1;transform:translate(0,0) scale(1.25,.13)}}
+@keyframes f11-ebroue{0%,65%{transform:rotate(0)}68%{transform:rotate(-7deg)}71%{transform:rotate(7deg)}74%{transform:rotate(-6deg)}77%{transform:rotate(5deg)}80%,100%{transform:rotate(0)}}
+
+/* ----- 12. le feu d'artifice ----- */
+.tdn-farce.f12{--rire:1.9s;--texte:2.45s;--bg:44%;--bb:60%;}
+.f12 .lf-bras-d{animation:f12-bras-d 3s ease-in-out both,f12-salut-d .5s ease-in-out 3s infinite alternate;}
+.f12 .lf-bras-g{animation:f12-bras-g 3s ease-in-out both,f12-salut-g .5s ease-in-out 3s infinite alternate;}
+.f12 .f12-fusee{animation:f12-fusee 3s ease-in both;}
+.f12 .f12-etincelle{animation:f12-etincelle 3s linear both;}
+.f12 .f12-flamme{animation:f12-flamme 3s linear both;}
+.f12 .f12-fumee{opacity:0;animation:f12-fumee .9s ease-out 1.1s both;}
+.f12 .f12-fumee.lf-d2{animation-delay:1.18s;}
+.f12 .f12-fumee.lf-d3{animation-delay:1.26s;}
+.f12 .f12-b1 .lf-eclat{--portee:74px;animation:f12-eclat 1.25s ease-out 1.85s both;}
+.f12 .f12-b2 .lf-eclat{--portee:60px;animation:f12-eclat 1.25s ease-out 2.1s both;}
+.f12 .f12-b3 .lf-eclat{--portee:54px;animation:f12-eclat 1.25s ease-out 2.3s both;}
+.f12 .f12-scint{opacity:0;animation:f12-scint 1.5s ease-in-out 2.6s infinite alternate;}
+.f12 .f12-scint.lf-d2{animation-delay:3.1s;}
+.f12 .f12-scint.lf-d3{animation-delay:3.6s;}
+@keyframes f12-bras-d{0%,12%{transform:rotate(0)}20%,30%{transform:rotate(-22deg)}36%,58%{transform:rotate(0)}66%,100%{transform:rotate(-125deg)}}
+@keyframes f12-bras-g{0%,58%{transform:rotate(0)}66%,100%{transform:rotate(125deg)}}
+@keyframes f12-salut-d{from{transform:rotate(-125deg)}to{transform:rotate(-105deg)}}
+@keyframes f12-salut-g{from{transform:rotate(125deg)}to{transform:rotate(105deg)}}
+@keyframes f12-fusee{0%,36%{opacity:1;transform:translate(0,0) rotate(0deg)}40%,48%{opacity:1;transform:translate(0,0) rotate(20deg)}51%{opacity:1;transform:translate(0,0) rotate(0deg)}61%{opacity:1;transform:translate(-20px,-250px) rotate(-4deg)}62%,100%{opacity:0;transform:translate(-20px,-250px) rotate(-4deg)}}
+@keyframes f12-etincelle{0%,16%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(1.2)}22%{opacity:1;transform:scale(.7)}26%{opacity:1;transform:scale(1.3)}30%{opacity:1;transform:scale(.6)}34%{opacity:1;transform:scale(1.2)}37%,100%{opacity:0;transform:scale(.3)}}
+@keyframes f12-flamme{0%,50%{opacity:0}52%,61%{opacity:1}62%,100%{opacity:0}}
+@keyframes f12-fumee{0%{opacity:0;transform:translate(0,0) scale(.4)}25%{opacity:.7}100%{opacity:0;transform:translate(-8px,-26px) scale(1.5)}}
+@keyframes f12-eclat{0%{opacity:0;transform:translateY(0) scale(.5)}10%{opacity:1}35%{opacity:1;transform:translateY(calc(var(--portee) * -.8)) scale(2.4)}100%{opacity:0;transform:translateY(calc(var(--portee) * -1)) scale(1.4)}}
+@keyframes f12-scint{from{opacity:.15;transform:scale(.5)}to{opacity:1;transform:scale(1.2)}}
+
+/* bulle à droite du lutin quand il se tient à gauche de la scène */
+.f3 .tdn-farce-bulle,.f11 .tdn-farce-bulle,.f12 .tdn-farce-bulle{right:auto;left:var(--bg);border-radius:1rem 1rem 1rem .25rem;transform-origin:0 100%;}
+.f3 .tdn-farce-bulle{border-radius:.25rem 1rem 1rem 1rem;transform-origin:0 0;}
 @media (prefers-reduced-motion:reduce){.tdn-farce *{animation-delay:0s!important;}}
