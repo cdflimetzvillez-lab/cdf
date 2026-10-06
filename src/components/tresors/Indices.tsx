@@ -1,11 +1,14 @@
 'use client';
 import { useState } from 'react';
 
-/** Indices révélés un par un, puis solution de secours en dernier recours. */
-export default function Indices({ indices, secours }: { indices: string[]; secours?: string }) {
+/** Indices révélés un par un, puis solution de secours en dernier recours.
+ *  Le bloc ne s'affiche pas quand la mission n'a ni indice ni solution de secours. */
+export default function Indices({ indices: liste, secours }: { indices: string[] | null; secours?: string }) {
   const [reveles, setReveles] = useState(0);
   const [secoursVu, setSecoursVu] = useState(false);
+  const indices = (liste ?? []).filter((i) => i.trim());
   const tousVus = reveles >= indices.length;
+  if (indices.length === 0 && !secours?.trim()) return null;
 
   return (
     <div className="tdn-indices">
