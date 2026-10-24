@@ -210,10 +210,12 @@ export default function FormReservationManuelle({
 
           {!exposant && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1.1rem', fontSize: '.9rem' }}>
-              {!benevole && paiement !== 'attente' && (
+              {(benevole || paiement !== 'attente') && (
                 <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
                   <input type="checkbox" name="envoyer_billet" defaultChecked style={{ width: 'auto' }} />
-                  Envoyer le billet par e-mail (si une adresse est saisie)
+                  {benevole
+                    ? 'Envoyer le billet par e-mail, mention « Repas offert » (si une adresse est saisie)'
+                    : 'Envoyer le billet par e-mail (si une adresse est saisie)'}
                 </label>
               )}
               {evt.places_max != null && (

@@ -208,6 +208,7 @@ export async function envoyerBillet(resa: any, alerterComite = true) {
     code_billet: resa.code_billet,
     reference: resa.reference,
     commentaire: resa.commentaire,
+    offert: !!resa.benevole,
     evenement: {
       titre: evt.titre ?? 'Comité des Fêtes',
       date_debut: evt.date_debut,
@@ -622,8 +623,8 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
 
   await db.from('reservation_lignes').insert(lignes.map((l) => ({ reservation_id: resa.id, ...l })));
 
-  // Le billet d'entrée n'a pas de sens pour un exposant.
-  if (!exposant && paye && email && fd.get('envoyer_billet') === 'on') await envoyerBillet(resa, false);
+  // Le billet d'entrée n'a pas de sens pour un exposant. Un repas offert est confirmé, le billet peut partir.
+  if (!exposant && (paye || benevole) && email && fd.get('envoyer_billet') === 'on') await envoyerBillet(resa, false);
 
   revalidatePath('/admin/reservations');
   revalidatePath('/admin/tresorerie');

@@ -32,6 +32,8 @@ export interface DonneesBillet {
   code_billet: string;
   reference: string;
   commentaire?: string | null;
+  /** Repas offert (bénévole, gagnant d'un jeu, invité) : le billet ne mentionne pas de montant réglé. */
+  offert?: boolean;
   evenement: {
     titre: string;
     date_debut?: string | null;
@@ -132,7 +134,7 @@ export function billetHtml(d: DonneesBillet, urlSite: string): string {
               ${horaire ? ligne('Horaires', horaire) : ''}
               ${d.evenement.lieu ? ligne('Lieu', d.evenement.lieu) : ''}
               ${ligne('Places', String(d.places))}
-              ${ligne('Montant réglé', euros(d.montant_centimes))}
+              ${d.offert ? ligne('Montant', 'Repas offert') : ligne('Montant réglé', euros(d.montant_centimes))}
               ${ligne('Référence', d.reference)}
             </table>
           </td>
@@ -212,7 +214,7 @@ Votre réservation est confirmée. Présentez ce code à l'entrée :
 
 ${d.evenement.titre}
 ${quand ? `Date       : ${quand}\n` : ''}${horaire ? `Horaires   : ${horaire}\n` : ''}${d.evenement.lieu ? `Lieu       : ${d.evenement.lieu}\n` : ''}Places     : ${d.places}
-Montant    : ${euros(d.montant_centimes)}
+Montant    : ${d.offert ? 'Repas offert' : euros(d.montant_centimes)}
 Référence  : ${d.reference}
 ${d.evenement.adresse ? `\nAdresse : ${d.evenement.adresse}\n` : ''}
 Conservez cet email, il fait office de billet.
@@ -238,7 +240,7 @@ export function alerteReservationHtml(d: DonneesBillet): string {
     <tr><td style="padding:22px;font-size:14px;line-height:1.8;color:${NOIR};">
       <strong>${d.nom}</strong> — ${d.places} place${d.places > 1 ? 's' : ''}
       pour <strong>${d.evenement.titre}</strong><br>
-      Montant : ${euros(d.montant_centimes)}<br>
+      Montant : ${d.offert ? 'Repas offert' : euros(d.montant_centimes)}<br>
       Référence : ${d.reference}<br>
       Code billet : ${d.code_billet}
       ${d.commentaire ? `<br><br><em>Remarque : ${d.commentaire}</em>` : ''}
