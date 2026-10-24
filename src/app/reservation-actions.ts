@@ -284,13 +284,14 @@ export async function changerStatutResa(id: string, statut: string): Promise<{ e
   const maj: Record<string, unknown> = { statut };
   if (statut === 'payee') {
     const { data: resa } = await supabase
-      .from('reservations').select('paye_le, checkout_id').eq('id', id).maybeSingle();
+      .from('reservations').select('paye_le, checkout_id, montant_centimes').eq('id', id).maybeSingle();
     if (resa && !resa.paye_le) {
       // Sans paiement en ligne, le mode (espèces ou chèque) doit être indiqué.
-      if (!resa.checkout_id) {
+      // Exception : une réservation à 0 € (repas offert, invitation) n'a rien à encaisser.
+      if (!resa.checkout_id && (resa.montant_centimes ?? 0) > 0) {
         return { erreur: 'Paiement hors ligne : utilise le bouton « Encaisser » pour indiquer espèces ou chèque.' };
       }
-      maj.paye_le = new Date().toISOString();
+      if (resa.checkout_id) maj.paye_le = new Date().toISOString();
     }
   }
 
@@ -306,6 +307,121 @@ export async function supprimerReservation(id: string) {
   await supabase.from('reservations').delete().eq('id', id);
   revalidatePath('/admin/reservations');
 }
+
+/* =========================================================
+   ADMIN — modifier une réservation existante
+   (coordonnées, places ou formules, montant, remarque, repas offert)
+   ========================================================= */
+type LigneSaisie = { libelle: string; prix_centimes: number; quantite: number };
+
+export async function modifierReservation(id: string, fd: FormData): Promise<{ ok?: string; erreur?: string }> {
+  const { isAdmin } = await requireAdmin('reservations');
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+
+  const nom         = String(fd.get('nom') ?? '').trim();
+  const email       = String(fd.get('email') ?? '').trim().toLowerCase();
+  const telephone   = String(fd.get('telephone') ?? '').trim();
+  const commentaire = String(fd.get('commentaire') ?? '').trim();
+  const montantTxt  = String(fd.get('montant') ?? '').trim();
+  const benevole    = fd.get('benevole') === 'on';
+  const depasser    = fd.get('depasser') === 'on';
+  const renvoyer    = fd.get('renvoyer_billet') === 'on';
+
+  if (nom.length < 2) return { erreur: 'Le nom est obligatoire.' };
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erreur: 'Adresse e-mail invalide.' };
+
+  // Détail des places ou formules, construit par le formulaire admin (libellé, prix, quantité).
+  let lignes: LigneSaisie[] = [];
+  try {
+    const brut = JSON.parse(String(fd.get('lignes') ?? '[]'));
+    if (!Array.isArray(brut)) throw new Error();
+    lignes = brut
+      .map((l: any) => ({
+        libelle: String(l?.libelle ?? '').trim().slice(0, 120),
+        prix_centimes: Math.max(0, Math.round(Number(l?.prix_centimes) || 0)),
+        quantite: Math.max(0, Math.floor(Number(l?.quantite) || 0)),
+      }))
+      .filter((l: LigneSaisie) => l.libelle && l.quantite > 0);
+  } catch {
+    return { erreur: 'Détail des places invalide.' };
+  }
+
+  const db = createAdminClient();
+  const { data: resa } = await db
+    .from('reservations')
+    .select('id, evenement_id, statut, places, montant_centimes, exposant, benevole, checkout_id, mode_paiement, paye_le')
+    .eq('id', id)
+    .maybeSingle();
+  if (!resa) return { erreur: 'Réservation introuvable.' };
+
+  const quantite = lignes.reduce((s, l) => s + l.quantite, 0);
+  if (quantite < 1) return { erreur: resa.exposant ? 'Choisis au moins une formule.' : 'Indique au moins une place.' };
+  // Un exposant compte pour une seule présence au pointage.
+  const places = resa.exposant ? 1 : quantite;
+
+  // Jauge : seulement si le nombre de places augmente, sauf dépassement demandé.
+  if (!resa.exposant && places > resa.places && !depasser) {
+    const { data: evt } = await db.from('evenements').select('places_max').eq('id', resa.evenement_id).maybeSingle();
+    if (evt?.places_max != null) {
+      const { data: restantes } = await db.rpc('places_restantes', { evt_id: resa.evenement_id });
+      const dispo = (typeof restantes === 'number' ? restantes : 0) + resa.places;
+      if (dispo < places) {
+        return { erreur: `Il ne reste que ${Math.max(0, dispo - resa.places)} place${dispo - resa.places > 1 ? 's' : ''} en plus. Coche « Autoriser le dépassement de la jauge » pour enregistrer quand même.` };
+      }
+    }
+  }
+
+  let montant = lignes.reduce((s, l) => s + l.prix_centimes * l.quantite, 0);
+  if (montantTxt !== '') {
+    const saisi = centimes(montantTxt);
+    if (saisi === null) return { erreur: 'Montant invalide.' };
+    montant = saisi;
+  }
+  // Repas offert : rien à encaisser.
+  if (benevole) montant = 0;
+
+  const maj: Record<string, unknown> = {
+    nom,
+    email: email || null,
+    telephone: telephone || null,
+    commentaire: commentaire || null,
+    places,
+    montant_centimes: montant,
+    benevole: resa.exposant ? false : benevole,
+  };
+  const horsLigne = !resa.checkout_id && !resa.mode_paiement;
+  if (benevole && !resa.exposant) {
+    // Offert : la place est confirmée, elle compte pour le traiteur et le pointage.
+    if (ENCAISSABLES_SERVEUR.includes(resa.statut)) maj.statut = 'payee';
+  } else if (resa.benevole && horsLigne && resa.statut === 'payee') {
+    // Plus offert et jamais encaissé : le montant redevient à encaisser.
+    maj.statut = 'en_attente';
+    maj.paye_le = null;
+  }
+
+  const { data: apres, error } = await db
+    .from('reservations').update(maj).eq('id', id).select(CHAMPS_EVT).single();
+  if (error || !apres) {
+    console.error('[modifierReservation]', error);
+    return { erreur: erreurBase(error?.message ?? 'Impossible de modifier la réservation.') };
+  }
+
+  // Détail : on remplace l'ancien.
+  await db.from('reservation_lignes').delete().eq('reservation_id', id);
+  const { error: errLignes } = await db
+    .from('reservation_lignes').insert(lignes.map((l) => ({ reservation_id: id, ...l })));
+  if (errLignes) console.error('[modifierReservation] lignes', errLignes);
+
+  if (renvoyer && apres.statut === 'payee' && apres.email && !apres.exposant) await envoyerBillet(apres, false);
+
+  revalidatePath('/admin/reservations');
+  revalidatePath('/admin/tresorerie');
+  revalidatePath('/admin/pointage/[id]', 'page');
+  return { ok: 'Réservation modifiée.' };
+}
+
+/** Statuts depuis lesquels une place peut être confirmée (payée ou offerte). */
+const ENCAISSABLES_SERVEUR = ['en_attente', 'echouee', 'expiree'];
 
 /** Admin : force une vérification auprès de SumUp pour une réservation (ou toutes celles en attente). */
 export async function verifierSumUpAdmin(reference?: string): Promise<{ verifiees: number; changees: number; erreur?: string }> {
@@ -344,7 +460,7 @@ function centimes(saisie: string): number | null {
 
 /** Explique l'erreur quand les colonnes de paiement n'ont pas encore été créées. */
 function erreurBase(message: string): string {
-  return /mode_paiement|paiement_ref|saisie_par|exposant/.test(message)
+  return /mode_paiement|paiement_ref|saisie_par|exposant|benevole/.test(message)
     ? 'La base n\u2019est pas à jour : exécute supabase/comptabilite.sql dans Supabase, puis réessaie.'
     : message;
 }
@@ -363,7 +479,9 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
   const telephone   = String(fd.get('telephone') ?? '').trim();
   const commentaire = String(fd.get('commentaire') ?? '').trim();
   const exposant    = fd.get('type') === 'exposant';
-  const paiement    = String(fd.get('paiement') ?? 'attente'); // especes | cheque | attente
+  // Bénévole : repas offert, à 0 €, mais compté dans la jauge et pour le traiteur.
+  const benevole    = fd.get('type') === 'benevole';
+  const paiement    = benevole ? 'attente' : String(fd.get('paiement') ?? 'attente'); // especes | cheque | attente
   const paiementRef = String(fd.get('paiement_ref') ?? '').trim();
   const montantTxt  = String(fd.get('montant') ?? '').trim();
   const tarifIds    = fd.getAll('tarif_id').map(String);
@@ -418,6 +536,7 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
     if (saisi === null) return { erreur: 'Montant invalide.' };
     montant = saisi;
   }
+  if (benevole) montant = 0;
 
   const { data: moi } = await supabase.from('admins').select('nom').eq('id', user.id).maybeSingle();
   const paye = paiement !== 'attente';
@@ -433,13 +552,15 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
       places,
       montant_centimes: montant,
       reference: genererReference(),
-      statut: paye ? 'payee' : 'en_attente',
+      // Un repas offert est confirmé d'emblée : il compte pour le traiteur et le pointage.
+      statut: paye || benevole ? 'payee' : 'en_attente',
       paye_le: paye ? new Date().toISOString() : null,
       mode_paiement: paye ? paiement : null,
       paiement_ref: paye && paiementRef ? paiementRef : null,
       saisie_par: moi?.nom ?? user.email ?? 'Admin',
-      // La colonne n'est envoyée que pour un exposant : les participants ne dépendent pas d'elle.
+      // Ces colonnes ne sont envoyées que si besoin : les participants classiques n'en dépendent pas.
       ...(exposant ? { exposant: true } : {}),
+      ...(benevole ? { benevole: true } : {}),
     })
     .select(CHAMPS_EVT)
     .single();
@@ -456,10 +577,13 @@ export async function ajouterReservationManuelle(_prev: EtatManuel, fd: FormData
 
   revalidatePath('/admin/reservations');
   revalidatePath('/admin/tresorerie');
-  const quoi = exposant ? 'exposant ajouté' : `ajouté, ${places} place${places > 1 ? 's' : ''}`;
-  return {
-    ok: `${nom} : ${quoi}, code ${resa.code_billet}. ${paye ? 'Paiement enregistré.' : 'Paiement en attente.'}`,
-  };
+  const quoi = exposant
+    ? 'exposant ajouté'
+    : benevole
+      ? `${places} repas bénévole${places > 1 ? 's' : ''} bloqué${places > 1 ? 's' : ''}`
+      : `ajouté, ${places} place${places > 1 ? 's' : ''}`;
+  const suite = benevole ? 'Offert, compté pour le traiteur.' : paye ? 'Paiement enregistré.' : 'Paiement en attente.';
+  return { ok: `${nom} : ${quoi}, code ${resa.code_billet}. ${suite}` };
 }
 
 /** Enregistre le paiement en espèces ou par chèque d'une réservation non payée. */

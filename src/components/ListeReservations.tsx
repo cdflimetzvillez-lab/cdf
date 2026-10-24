@@ -5,7 +5,11 @@ import LigneReservation from '@/components/LigneReservation';
 const norm = (s: unknown) =>
   String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-export default function ListeReservations({ reservations }: { reservations: any[] }) {
+type Tarif = { id: string; evenement_id: string; libelle: string; prix_centimes: number };
+
+export default function ListeReservations({
+  reservations, tarifs = [], formules = [],
+}: { reservations: any[]; tarifs?: Tarif[]; formules?: Tarif[] }) {
   const [q, setQ] = useState('');
   const liste = useMemo(() => {
     const t = norm(q).trim();
@@ -39,7 +43,7 @@ export default function ListeReservations({ reservations }: { reservations: any[
           </tr>
         </thead>
         <tbody>
-          {liste.map((r) => <LigneReservation key={r.id} resa={r} />)}
+          {liste.map((r) => <LigneReservation key={r.id} resa={r} tarifs={tarifs} formules={formules} />)}
           {liste.length === 0 && (
             <tr><td colSpan={7} style={{ color: '#6b6560' }}>{q ? 'Aucun résultat.' : 'Aucune réservation.'}</td></tr>
           )}

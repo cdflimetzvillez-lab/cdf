@@ -34,22 +34,66 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
       .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 
     const total = payees.reduce((s, r) => s + r.places, 0);
+    const offerts = payees.filter((r) => r.benevole).reduce((s, r) => s + r.places, 0);
 
     const lignes: string[][] = [
       [`LISTE D'ÉMARGEMENT — ${titreEvt}`],
-      [`${payees.length} réservations · ${total} personnes`],
+      [`${payees.length} réservations · ${total} personnes${offerts > 0 ? ` (dont ${offerts} bénévoles, repas offerts)` : ''}`],
       [`Éditée le ${new Date().toLocaleDateString('fr-FR')}`],
       [],
       ['Nom', 'Places', 'Code billet', 'Téléphone', 'Email', 'Remarque', 'Présent (à cocher)'],
       ...payees.map((r) => [
         r.nom, String(r.places), r.code_billet,
-        r.telephone ?? '', r.email ?? '', r.commentaire ?? '', '',
+        r.telephone ?? '', r.email ?? '',
+        [r.benevole ? 'Bénévole (offert)' : r.exposant ? 'Exposant' : '', r.commentaire ?? ''].filter(Boolean).join(' · '),
+        '',
       ]),
       [],
       ['TOTAL', String(total), '', '', '', '', ''],
     ];
 
     telecharger(`emargement-${slugifie(titreEvt)}.csv`, lignes);
+  }
+
+  /**
+   * Liste traiteur : repas à commander, par menu (détail des tarifs), payants et offerts aux bénévoles.
+   * Places confirmées = payées + saisies à la main en attente de paiement. Les exposants ne comptent pas.
+   */
+  function listeTraiteur(resas: any[], titreEvt: string) {
+    const comptees = resas.filter((r) =>
+      !r.exposant && (r.statut === 'payee' || (r.statut === 'en_attente' && r.saisie_par)));
+    const menus = new Map<string, { payants: number; offerts: number }>();
+    const ajoute = (libelle: string, q: number, offert: boolean) => {
+      const m = menus.get(libelle) ?? { payants: 0, offerts: 0 };
+      if (offert) m.offerts += q; else m.payants += q;
+      menus.set(libelle, m);
+    };
+    for (const r of comptees) {
+      const detail: any[] = r.reservation_lignes ?? [];
+      if (detail.length > 0) detail.forEach((l) => ajoute(l.libelle, l.quantite, !!r.benevole));
+      else ajoute('Place', r.places, !!r.benevole);
+    }
+    const totPayants = [...menus.values()].reduce((s, m) => s + m.payants, 0);
+    const totOfferts = [...menus.values()].reduce((s, m) => s + m.offerts, 0);
+
+    const lignes: string[][] = [
+      [`LISTE TRAITEUR — ${titreEvt}`],
+      [`${totPayants + totOfferts} repas à prévoir · ${totPayants} payants · ${totOfferts} offerts aux bénévoles`],
+      [`Éditée le ${new Date().toLocaleDateString('fr-FR')}`],
+      [],
+      ['Menu', 'Payants', 'Bénévoles (offerts)', 'Total'],
+      ...[...menus.entries()].map(([libelle, m]) => [libelle, String(m.payants), String(m.offerts), String(m.payants + m.offerts)]),
+      ['TOTAL', String(totPayants), String(totOfferts), String(totPayants + totOfferts)],
+      [],
+      ['Détail des bénévoles'],
+      ['Nom', 'Repas', 'Détail', 'Remarque'],
+      ...comptees.filter((r) => r.benevole).map((r) => [
+        r.nom, String(r.places),
+        (r.reservation_lignes ?? []).map((l: any) => `${l.quantite} x ${l.libelle}`).join(', '),
+        r.commentaire ?? '',
+      ]),
+    ];
+    telecharger(`traiteur-${slugifie(titreEvt)}.csv`, lignes);
   }
 
   /** Export comptable : toutes les réservations, tous statuts. */
@@ -60,7 +104,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
        'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Détail', 'Remarque'],
       ...resas.map((r) => [
         r.reference,
-        r.exposant ? 'Exposant' : 'Participant',
+        r.exposant ? 'Exposant' : r.benevole ? 'Bénévole' : 'Participant',
         new Date(r.created_at).toLocaleDateString('fr-FR'),
         r.nom, r.email ?? '', r.telephone ?? '',
         r.evenements?.titre ?? '',
@@ -68,7 +112,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
         (r.montant_centimes / 100).toFixed(2).replace('.', ','),
         r.statut, r.code_billet,
         r.scanne_le ? 'oui' : 'non',
-        r.mode_paiement === 'especes' ? 'Espèces' : r.mode_paiement === 'cheque' ? 'Chèque' : r.statut === 'payee' ? 'SumUp' : '',
+        r.benevole ? 'Offert' : r.mode_paiement === 'especes' ? 'Espèces' : r.mode_paiement === 'cheque' ? 'Chèque' : r.statut === 'payee' ? 'SumUp' : '',
         r.transaction_code ?? '',
         r.paiement_ref ?? '',
         (r.reservation_lignes ?? []).map((l: any) => `${l.quantite} x ${l.libelle}`).join(', '),
@@ -115,6 +159,26 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
           {parEvenement.length === 0 && (
             <p className="export-aide">Aucune réservation.</p>
           )}
+
+          <div className="export-titre" style={{ marginTop: '1rem' }}>Liste traiteur</div>
+          <p className="export-aide">
+            Nombre de repas par menu à commander : places payées et à encaisser, plus les repas offerts aux bénévoles.
+          </p>
+          {parEvenement.map((e) => {
+            const repas = e.resas
+              .filter((r) => !r.exposant && (r.statut === 'payee' || (r.statut === 'en_attente' && r.saisie_par)))
+              .reduce((s, r) => s + r.places, 0);
+            return (
+              <button
+                key={`t-${e.id}`}
+                className="export-item"
+                onClick={() => { listeTraiteur(e.resas, e.titre); setOuvert(false); }}
+              >
+                {e.titre}
+                <span>{repas} repas</span>
+              </button>
+            );
+          })}
 
           <div className="export-titre" style={{ marginTop: '1rem' }}>
             Export comptable

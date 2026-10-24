@@ -94,6 +94,8 @@ export interface Reservation {
   saisie_par: string | null;
   /** Réservation d'un exposant (formules d'emplacement) plutôt que d'un participant. */
   exposant: boolean;
+  /** Repas offert à un bénévole : 0 €, compté dans la jauge et pour le traiteur. */
+  benevole: boolean;
 }
 
 export type Partenaire = {

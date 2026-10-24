@@ -6,7 +6,7 @@ import {
 
 type Evt = { id: string; titre: string; prix_centimes: number | null; places_max: number | null; billetterie_active: boolean | null };
 type Tarif = { id: string; evenement_id: string; libelle: string; prix_centimes: number };
-type TypeSaisie = 'participant' | 'exposant';
+type TypeSaisie = 'participant' | 'exposant' | 'benevole';
 
 const euros = (c: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
@@ -14,8 +14,8 @@ const enSaisie = (c: number) => (c / 100).toFixed(2).replace('.', ',');
 const champ = { padding: '.5rem', border: '2px solid var(--noir)', fontFamily: 'inherit' } as const;
 
 /**
- * Ajout par un admin d'un participant (billetterie) ou d'un exposant (formules d'emplacement),
- * avec paiement en espèces, par chèque ou à venir.
+ * Ajout par un admin d'un participant (billetterie), d'un exposant (formules d'emplacement)
+ * ou d'un bénévole (repas offert, compté pour le traiteur), avec paiement en espèces, par chèque ou à venir.
  */
 export default function FormReservationManuelle({
   evenements, tarifs, formules, evenementInitial,
@@ -35,7 +35,8 @@ export default function FormReservationManuelle({
   const [enCours, start] = useTransition();
 
   const exposant = type === 'exposant';
-  // Participants : événements avec billetterie. Exposants : tous les événements.
+  const benevole = type === 'benevole';
+  // Participants et bénévoles : événements avec billetterie. Exposants : tous les événements.
   const choix = useMemo(
     () => (exposant ? evenements : evenements.filter((e) => e.billetterie_active)),
     [evenements, exposant]
@@ -55,7 +56,8 @@ export default function FormReservationManuelle({
   }, [tarifs, formules, evt, exposant]);
   const formulesEvt = exposant && evt ? formules.filter((f) => f.evenement_id === evt.id) : [];
 
-  const total = lignes.reduce((s, l) => s + l.prix * (qtes[l.id] ?? 0), 0);
+  const totalTarif = lignes.reduce((s, l) => s + l.prix * (qtes[l.id] ?? 0), 0);
+  const total = benevole ? 0 : totalTarif;
   const quantite = lignes.reduce((s, l) => s + (qtes[l.id] ?? 0), 0);
 
   const vider = () => { setQtes({}); setMontantSaisi(null); };
@@ -70,7 +72,7 @@ export default function FormReservationManuelle({
       <div style={{ marginBottom: '1.6rem' }}>
         {etat?.ok && <div className="msg ok">{etat.ok}</div>}
         <button type="button" className="btn btn-k btn-sm" onClick={() => setOuvert(true)}>
-          + Ajouter un participant ou un exposant
+          + Ajouter un participant, un exposant ou un bénévole
         </button>
       </div>
     );
@@ -78,12 +80,12 @@ export default function FormReservationManuelle({
 
   return (
     <div className="panel">
-      <h2>{exposant ? 'Ajouter un exposant' : 'Ajouter un participant'}</h2>
+      <h2>{exposant ? 'Ajouter un exposant' : benevole ? 'Bloquer des repas bénévoles' : 'Ajouter un participant'}</h2>
       {etat?.ok && <div className="msg ok">{etat.ok}</div>}
       {etat?.erreur && <div className="msg ko">{etat.erreur}</div>}
 
       <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.1rem' }}>
-        <button type="button" className={`btn btn-sm ${exposant ? 'btn-w' : 'btn-k'}`}
+        <button type="button" className={`btn btn-sm ${type === 'participant' ? 'btn-k' : 'btn-w'}`}
           onClick={() => { setType('participant'); setEvenementId(''); vider(); }}>
           Participant
         </button>
@@ -91,7 +93,18 @@ export default function FormReservationManuelle({
           onClick={() => { setType('exposant'); setEvenementId(''); vider(); }}>
           Exposant
         </button>
+        <button type="button" className={`btn btn-sm ${benevole ? 'btn-k' : 'btn-w'}`}
+          onClick={() => { setType('benevole'); setEvenementId(''); vider(); }}>
+          Bénévole (repas offert)
+        </button>
       </div>
+      {benevole && (
+        <p style={{ fontSize: '.85rem', color: '#6b6560', margin: '-.4rem 0 1rem' }}>
+          Les repas offerts aux bénévoles ne rapportent rien mais doivent être commandés au traiteur :
+          ils comptent dans les places réservées et dans la liste traiteur, à 0 €.
+          Tu peux saisir un nom par bénévole ou une seule ligne pour une équipe (ex. « Bénévoles buvette », 6 repas).
+        </p>
+      )}
 
       {!evt ? (
         <p style={{ color: '#6b6560', marginBottom: '1rem' }}>
@@ -110,7 +123,7 @@ export default function FormReservationManuelle({
 
           <div className="row3">
             <div className="field">
-              <label htmlFor="rm-nom">{exposant ? 'Nom ou structure' : 'Nom et prénom'}</label>
+              <label htmlFor="rm-nom">{exposant ? 'Nom ou structure' : benevole ? 'Nom du bénévole ou de l\u2019équipe' : 'Nom et prénom'}</label>
               <input id="rm-nom" name="nom" required minLength={2} autoComplete="off" />
             </div>
             <div className="field">
@@ -124,13 +137,15 @@ export default function FormReservationManuelle({
           </div>
 
           <div className="field">
-            <label>{exposant ? 'Formules' : 'Places'}</label>
+            <label>{exposant ? 'Formules' : benevole ? 'Repas (par menu)' : 'Places'}</label>
             <table className="tbl" style={{ maxWidth: 560 }}>
               <tbody>
                 {lignes.map((l) => (
                   <tr key={l.id}>
                     <td>{l.libelle}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{l.id === 'defaut' && exposant ? 'prix libre' : euros(l.prix)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {l.id === 'defaut' && exposant ? 'prix libre' : benevole ? <>offert <s style={{ color: '#8a7f6f' }}>{euros(l.prix)}</s></> : euros(l.prix)}
+                    </td>
                     <td style={{ width: 110 }}>
                       <input type="hidden" name="tarif_id" value={l.id} />
                       <input
@@ -147,6 +162,12 @@ export default function FormReservationManuelle({
             </table>
           </div>
 
+          {benevole ? (
+            <p style={{ fontSize: '.85rem', margin: '0 0 1rem' }}>
+              <strong>{quantite} repas</strong> offert{quantite > 1 ? 's' : ''}, 0 € à encaisser
+              {totalTarif > 0 && <span style={{ color: '#6b6560' }}> (valeur au tarif normal : {euros(totalTarif)})</span>}.
+            </p>
+          ) : (
           <div className="row3">
             <div className="field">
               <label htmlFor="rm-montant">
@@ -170,7 +191,8 @@ export default function FormReservationManuelle({
               </div>
             )}
           </div>
-          {montantSaisi !== null && (
+          )}
+          {!benevole && montantSaisi !== null && (
             <p style={{ fontSize: '.8rem', color: '#6b6560', margin: '-.4rem 0 .9rem' }}>
               Montant modifié à la main, tarif normal {euros(total)}.{' '}
               <button type="button" onClick={() => setMontantSaisi(null)}
@@ -181,13 +203,13 @@ export default function FormReservationManuelle({
           )}
 
           <div className="field">
-            <label htmlFor="rm-com">{exposant ? 'Activité, produits vendus, remarque' : 'Remarque (facultatif)'}</label>
+            <label htmlFor="rm-com">{exposant ? 'Activité, produits vendus, remarque' : benevole ? 'Poste, remarque (facultatif)' : 'Remarque (facultatif)'}</label>
             <input id="rm-com" name="commentaire" autoComplete="off" />
           </div>
 
           {!exposant && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginBottom: '1.1rem', fontSize: '.9rem' }}>
-              {paiement !== 'attente' && (
+              {!benevole && paiement !== 'attente' && (
                 <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
                   <input type="checkbox" name="envoyer_billet" defaultChecked style={{ width: 'auto' }} />
                   Envoyer le billet par e-mail (si une adresse est saisie)
@@ -204,7 +226,7 @@ export default function FormReservationManuelle({
 
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
             <button className="btn btn-k btn-sm" disabled={pending || quantite < 1}>
-              {pending ? 'Enregistrement…' : exposant ? "Ajouter l'exposant" : 'Ajouter la réservation'}
+              {pending ? 'Enregistrement…' : exposant ? "Ajouter l'exposant" : benevole ? 'Bloquer les repas' : 'Ajouter la réservation'}
             </button>
             <button type="button" className="btn btn-w btn-sm" onClick={() => setOuvert(false)}>Fermer</button>
           </div>

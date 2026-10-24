@@ -23,9 +23,11 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
   const { data: resas } = await requete;
   const liste = resas ?? [];
 
-  const payees = liste.filter((r) => r.statut === 'payee');
+  const payees = liste.filter((r) => r.statut === 'payee' && !r.benevole);
   const recette = payees.reduce((s, r) => s + r.montant_centimes, 0);
   const placesVendues = payees.reduce((s, r) => s + r.places, 0);
+  // Repas offerts aux bénévoles : 0 €, mais à commander au traiteur.
+  const repasBenevoles = liste.filter((r) => r.benevole && r.statut === 'payee').reduce((s, r) => s + r.places, 0);
   // Saisies à la main pas encore payées : la place est prise, le montant reste à encaisser.
   const aEncaisser = liste.filter((r) => r.statut === 'en_attente' && r.saisie_par);
   const ecart = aEncaisser.reduce((s, r) => s + r.montant_centimes, 0);
@@ -42,7 +44,8 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
       </div>
 
       <div className="kpi">
-        <div><b>{placesVendues + placesAEncaisser}</b><span>Places réservées</span></div>
+        <div><b>{placesVendues + placesAEncaisser + repasBenevoles}</b><span>Places réservées</span></div>
+        {repasBenevoles > 0 && <div><b>{repasBenevoles}</b><span>Repas bénévoles (offerts)</span></div>}
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
         <div>
           <b style={ecart > 0 ? { color: 'var(--evt-dark)' } : undefined}>{ecart > 0 ? `− ${euros(ecart)}` : euros(0)}</b>
@@ -74,6 +77,9 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
                   <td data-l="Réservées">
                     {reservees}
                     {attente > 0 && <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>}
+                    {Number(s.places_benevoles ?? 0) > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {s.places_benevoles} repas bénévole{Number(s.places_benevoles) > 1 ? 's' : ''}</div>
+                    )}
                   </td>
                   <td data-l="Jauge" className="bloc">
                     {s.places_max

@@ -33,8 +33,11 @@ export default async function Reservations({
   const { data: resas } = await requete;
   const liste = resas ?? [];
 
-  const payees = liste.filter((r) => r.statut === 'payee');
+  const payees = liste.filter((r) => r.statut === 'payee' && !r.benevole);
   const exposants = liste.filter((r) => r.exposant);
+  // Repas offerts aux bénévoles : 0 €, mais à commander au traiteur.
+  const benevoles = liste.filter((r) => r.benevole && r.statut === 'payee');
+  const repasBenevoles = benevoles.reduce((s, r) => s + r.places, 0);
   // Saisies à la main pas encore payées : la place est prise, le montant reste à encaisser.
   const aEncaisser = liste.filter((r) => r.statut === 'en_attente' && r.saisie_par);
   const ecart = aEncaisser.reduce((s, r) => s + r.montant_centimes, 0);
@@ -60,7 +63,10 @@ export default async function Reservations({
       />
 
       <div className="kpi">
-        <div><b>{placesVendues + placesAEncaisser}</b><span>Places réservées</span></div>
+        <div><b>{placesVendues + placesAEncaisser + repasBenevoles}</b><span>Places réservées</span></div>
+        {repasBenevoles > 0 && (
+          <div><b>{repasBenevoles}</b><span>Repas bénévoles (offerts)</span></div>
+        )}
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
         <div>
           <b style={ecart > 0 ? { color: 'var(--evt-dark)' } : undefined}>{ecart > 0 ? `− ${euros(ecart)}` : euros(0)}</b>
@@ -87,6 +93,8 @@ export default async function Reservations({
               {(suivi as any[]).map((s) => {
                 // Jauge : places payées + places saisies à la main en attente de paiement.
                 const attente = Number(s.places_a_encaisser ?? 0);
+                const offerts = Number(s.places_benevoles ?? 0);
+                // places_vendues inclut déjà les repas offerts (statut payée à 0 €).
                 const reservees = Number(s.places_vendues) + attente;
                 const du = Number(s.a_encaisser_centimes ?? 0);
                 return (
@@ -103,6 +111,9 @@ export default async function Reservations({
                     {reservees}
                     {attente > 0 && (
                       <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>
+                    )}
+                    {offerts > 0 && (
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {offerts} repas bénévole{offerts > 1 ? 's' : ''}</div>
                     )}
                   </td>
                   <td data-l="Jauge" className="bloc">
@@ -146,7 +157,7 @@ export default async function Reservations({
           {evt && <> · <Link href="/admin/reservations" style={{ fontSize: '.8rem' }}>tout voir</Link></>}
         </h2>
 
-        <ListeReservations reservations={liste as any[]} />
+        <ListeReservations reservations={liste as any[]} tarifs={tarifs ?? []} formules={formules ?? []} />
       </div>
     </>
   );

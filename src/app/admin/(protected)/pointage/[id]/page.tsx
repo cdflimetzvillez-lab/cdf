@@ -22,7 +22,7 @@ export default async function Pointage(
 
   const { data: resas } = await supabase
     .from('reservations')
-    .select('id, nom, email, telephone, commentaire, places, places_arrivees, code_billet, reference')
+    .select('id, nom, email, telephone, commentaire, places, places_arrivees, code_billet, reference, benevole, exposant')
     .eq('evenement_id', id)
     .eq('statut', 'payee')
     .order('nom');

@@ -34,7 +34,7 @@ export default function ListeReservationsLecture({ reservations }: { reservation
             <tr key={r.id}>
               <td data-l="Date">{fmt(r.created_at)}</td>
               <td data-l="Acheteur" className="bloc">
-                <strong>{r.nom}</strong>{r.exposant && <> <span className="pill done">Exposant</span></>}<br />
+                <strong>{r.nom}</strong>{r.exposant && <> <span className="pill done">Exposant</span></>}{r.benevole && <> <span className="pill new">Bénévole · offert</span></>}<br />
                 <span style={{ color: '#6b6560', fontSize: '.8rem' }}>{[r.email, r.telephone].filter(Boolean).join(' · ')}</span>
               </td>
               <td data-l="Événement" style={{ fontSize: '.85rem' }}>{r.evenements?.titre}</td>

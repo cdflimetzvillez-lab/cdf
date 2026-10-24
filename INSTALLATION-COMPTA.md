@@ -46,3 +46,19 @@ Mise à jour de la base : exécuter supabase/bureau.sql. Tant que ce n'est pas f
 
 Les accès sont vérifiés côté serveur, page par page et action par action. Les règles de la base restent
 réservées aux administrateurs, sauf la trésorerie et la comptabilité, ouvertes aux postes qui ont ces modules.
+
+## Modifier une réservation et repas offerts aux bénévoles
+
+Mise à jour de la base : réexécuter supabase/comptabilite.sql (colonne benevole, vue suivi_billetterie).
+
+Admin, Réservations, bouton « Modifier » sur chaque ligne : nom, téléphone, e-mail, places ou formules (par menu),
+montant, remarque. Les places en plus respectent la jauge sauf dépassement autorisé. Pour une réservation payée,
+une case permet de renvoyer le billet mis à jour. Un paiement SumUp déjà encaissé n'est ni remboursé ni prélevé
+par la modification : le remboursement se fait depuis SumUp.
+
+Repas bénévoles : onglet « Bénévole (repas offert) » dans « + Ajouter », ou case « Repas offert (bénévole) » dans
+« Modifier » pour quelqu'un déjà inscrit. Le repas est à 0 €, confirmé d'emblée (statut Payée), compté dans la jauge,
+au pointage et dans la liste traiteur, mais pas dans la recette ni dans l'écart à encaisser. La comptabilité ignore
+les ventes à 0 €. Une ligne peut regrouper une équipe (« Bénévoles buvette », 6 repas) avec le détail par menu.
+
+Export « Liste traiteur », par événement : nombre de repas par menu, payants et offerts, avec le détail des bénévoles.

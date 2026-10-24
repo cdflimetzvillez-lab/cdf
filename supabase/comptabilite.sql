@@ -27,6 +27,8 @@ alter table public.reservations add column if not exists saisie_par text;
 alter table public.reservations alter column email drop not null;
 -- Réservation d'un exposant (stand), saisie par un admin.
 alter table public.reservations add column if not exists exposant boolean not null default false;
+-- Repas offert à un bénévole : 0 €, mais compté dans la jauge et pour le traiteur.
+alter table public.reservations add column if not exists benevole boolean not null default false;
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'reservations_mode_paiement_check') then
@@ -38,7 +40,7 @@ end $$;
 
 -- Suivi par événement. Une réservation saisie à la main compte dans la jauge dès la saisie ;
 -- tant qu'elle n'est pas payée, son montant apparaît en écart à encaisser.
--- Les colonnes d'origine sont inchangées, trois colonnes sont ajoutées à la fin.
+-- Les colonnes d'origine sont inchangées, quatre colonnes sont ajoutées à la fin (dont les repas bénévoles).
 do $$
 declare
   v_invoker boolean;
@@ -60,7 +62,8 @@ begin
          count(r.id) filter (where r.statut = 'en_attente') as nb_en_attente,
          coalesce(sum(r.places) filter (where r.statut = 'en_attente' and r.saisie_par is not null), 0::bigint) as places_a_encaisser,
          coalesce(sum(r.montant_centimes) filter (where r.statut = 'en_attente' and r.saisie_par is not null), 0::bigint) as a_encaisser_centimes,
-         count(r.id) filter (where r.exposant and r.statut in ('payee', 'en_attente')) as nb_exposants
+         count(r.id) filter (where r.exposant and r.statut in ('payee', 'en_attente')) as nb_exposants,
+         coalesce(sum(r.places) filter (where r.statut = 'payee' and r.benevole), 0::bigint) as places_benevoles
   from public.evenements e
   left join public.reservations r on r.evenement_id = e.id
   where e.billetterie_active = true
