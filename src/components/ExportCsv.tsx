@@ -38,14 +38,14 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
 
     const lignes: string[][] = [
       [`LISTE D'ÉMARGEMENT — ${titreEvt}`],
-      [`${payees.length} réservations · ${total} personnes${offerts > 0 ? ` (dont ${offerts} bénévoles, repas offerts)` : ''}`],
+      [`${payees.length} réservations · ${total} personnes${offerts > 0 ? ` (dont ${offerts} repas offerts)` : ''}`],
       [`Éditée le ${new Date().toLocaleDateString('fr-FR')}`],
       [],
       ['Nom', 'Places', 'Code billet', 'Téléphone', 'Email', 'Remarque', 'Présent (à cocher)'],
       ...payees.map((r) => [
         r.nom, String(r.places), r.code_billet,
         r.telephone ?? '', r.email ?? '',
-        [r.benevole ? 'Bénévole (offert)' : r.exposant ? 'Exposant' : '', r.commentaire ?? ''].filter(Boolean).join(' · '),
+        [r.benevole ? 'Offert' : r.exposant ? 'Exposant' : '', r.commentaire ?? ''].filter(Boolean).join(' · '),
         '',
       ]),
       [],
@@ -56,7 +56,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
   }
 
   /**
-   * Liste traiteur : repas à commander, par menu (détail des tarifs), payants et offerts aux bénévoles.
+   * Liste traiteur : repas à commander, par menu (détail des tarifs), payants et offerts (bénévoles, gagnants, invités).
    * Places confirmées = payées + saisies à la main en attente de paiement. Les exposants ne comptent pas.
    */
   function listeTraiteur(resas: any[], titreEvt: string) {
@@ -78,14 +78,14 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
 
     const lignes: string[][] = [
       [`LISTE TRAITEUR — ${titreEvt}`],
-      [`${totPayants + totOfferts} repas à prévoir · ${totPayants} payants · ${totOfferts} offerts aux bénévoles`],
+      [`${totPayants + totOfferts} repas à prévoir · ${totPayants} payants · ${totOfferts} offerts`],
       [`Éditée le ${new Date().toLocaleDateString('fr-FR')}`],
       [],
-      ['Menu', 'Payants', 'Bénévoles (offerts)', 'Total'],
+      ['Menu', 'Payants', 'Offerts', 'Total'],
       ...[...menus.entries()].map(([libelle, m]) => [libelle, String(m.payants), String(m.offerts), String(m.payants + m.offerts)]),
       ['TOTAL', String(totPayants), String(totOfferts), String(totPayants + totOfferts)],
       [],
-      ['Détail des bénévoles'],
+      ['Détail des repas offerts (bénévoles, gagnants, invités)'],
       ['Nom', 'Repas', 'Détail', 'Remarque'],
       ...comptees.filter((r) => r.benevole).map((r) => [
         r.nom, String(r.places),
@@ -104,7 +104,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
        'Pointé', 'Paiement', 'Transaction SumUp', 'N° chèque', 'Détail', 'Remarque'],
       ...resas.map((r) => [
         r.reference,
-        r.exposant ? 'Exposant' : r.benevole ? 'Bénévole' : 'Participant',
+        r.exposant ? 'Exposant' : r.benevole ? 'Offert' : 'Participant',
         new Date(r.created_at).toLocaleDateString('fr-FR'),
         r.nom, r.email ?? '', r.telephone ?? '',
         r.evenements?.titre ?? '',
@@ -162,7 +162,7 @@ export default function ExportCsv({ reservations, evenements = [] }: Props) {
 
           <div className="export-titre" style={{ marginTop: '1rem' }}>Liste traiteur</div>
           <p className="export-aide">
-            Nombre de repas par menu à commander : places payées et à encaisser, plus les repas offerts aux bénévoles.
+            Nombre de repas par menu à commander : places payées et à encaisser, plus les repas offerts (bénévoles, gagnants, invités).
           </p>
           {parEvenement.map((e) => {
             const repas = e.resas

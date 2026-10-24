@@ -65,7 +65,7 @@ export default async function Reservations({
       <div className="kpi">
         <div><b>{placesVendues + placesAEncaisser + repasBenevoles}</b><span>Places réservées</span></div>
         {repasBenevoles > 0 && (
-          <div><b>{repasBenevoles}</b><span>Repas bénévoles (offerts)</span></div>
+          <div><b>{repasBenevoles}</b><span>Repas offerts</span></div>
         )}
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
         <div>
@@ -113,7 +113,7 @@ export default async function Reservations({
                       <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>
                     )}
                     {offerts > 0 && (
-                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {offerts} repas bénévole{offerts > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {offerts} repas offert{offerts > 1 ? 's' : ''}</div>
                     )}
                   </td>
                   <td data-l="Jauge" className="bloc">

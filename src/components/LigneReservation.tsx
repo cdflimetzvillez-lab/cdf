@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   marquerScanne, changerStatutResa, supprimerReservation, verifierSumUpAdmin, encaisserReservation,
-  modifierReservation,
+  modifierReservation, offrirRepas,
 } from '@/app/reservation-actions';
 import Confirmation from '@/components/Confirmation';
 
@@ -20,6 +20,7 @@ const LIBELLES: Record<string, string> = {
   expiree: 'Expirée', remboursee: 'Remboursée', annulee: 'Annulée',
 };
 const MODES: Record<string, string> = { especes: 'Espèces', cheque: 'Chèque' };
+const MOTIFS_OFFERT = ['Bénévole', 'Gagnant d\u2019un jeu', 'Invité', 'Partenaire', 'Autre'];
 /** Statuts depuis lesquels un paiement en espèces ou par chèque peut être enregistré. */
 const ENCAISSABLES = ['en_attente', 'echouee', 'expiree'];
 
@@ -69,6 +70,11 @@ export default function LigneReservation({
   const [renvoyer, setRenvoyer] = useState(false);
   const [erreur, setErreur] = useState('');
 
+  // Offrir le repas (bénévole, gagnant d'un jeu, invité…)
+  const [offre, setOffre] = useState(false);
+  const [motif, setMotif] = useState(MOTIFS_OFFERT[0]);
+  const [motifLibre, setMotifLibre] = useState('');
+
   const grille = useMemo(
     () => (resa.exposant ? formules : tarifs).filter((t) => t.evenement_id === resa.evenement_id),
     [resa.exposant, resa.evenement_id, tarifs, formules],
@@ -85,7 +91,7 @@ export default function LigneReservation({
     const tarif = lignesInitiales(resa, grille).reduce((s, l) => s + l.prix_centimes * l.quantite, 0);
     setMontantSaisi(tarif === resa.montant_centimes ? null : enSaisie(resa.montant_centimes));
     setDepasser(false); setRenvoyer(false); setErreur('');
-    setEncaisse(false);
+    setEncaisse(false); setOffre(false);
     setEdition(true);
   }
 
@@ -117,7 +123,7 @@ export default function LigneReservation({
         <td data-l="Acheteur" className="bloc">
           <strong>{resa.nom}</strong>
           {resa.exposant && <> <span className="pill done">Exposant</span></>}
-          {resa.benevole && <> <span className="pill new">Bénévole · offert</span></>}
+          {resa.benevole && <> <span className="pill new">Offert</span></>}
           {resa.email && (
             <><br /><a href={`mailto:${resa.email}`} style={{ color: '#6b6560', fontSize: '.8rem' }}>
               {resa.email}
@@ -198,8 +204,14 @@ export default function LigneReservation({
           </button>
           {ENCAISSABLES.includes(resa.statut) && !resa.benevole && (
             <button className="btn btn-k btn-sm" style={{ marginRight: '.4rem' }}
-              onClick={() => { setEdition(false); setEncaisse((v) => !v); }}>
+              onClick={() => { setEdition(false); setOffre(false); setEncaisse((v) => !v); }}>
               Encaisser
+            </button>
+          )}
+          {!resa.exposant && !resa.benevole && ['payee', ...ENCAISSABLES].includes(resa.statut) && (
+            <button className="btn btn-w btn-sm" title="Repas offert : bénévole, gagnant d'un jeu, invité" style={{ marginRight: '.4rem' }}
+              onClick={() => { setEdition(false); setEncaisse(false); setOffre((v) => !v); }}>
+              Offrir
             </button>
           )}
           {resa.statut === 'en_attente' && resa.checkout_id && (
@@ -285,7 +297,7 @@ export default function LigneReservation({
               {!resa.exposant && (
                 <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
                   <input type="checkbox" checked={benevole} onChange={(e) => setBenevole(e.target.checked)} style={{ width: 'auto' }} />
-                  Repas offert (bénévole) : 0 € à encaisser, compté pour le traiteur
+                  Repas offert (bénévole, gagnant d\u2019un jeu, invité) : 0 € à encaisser, compté pour le traiteur
                 </label>
               )}
               {!resa.exposant && quantite > resa.places && (
@@ -312,6 +324,49 @@ export default function LigneReservation({
                 {pending ? 'Enregistrement…' : 'Enregistrer les modifications'}
               </button>
               <button className="btn btn-w btn-sm" onClick={() => setEdition(false)}>Annuler</button>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {offre && (
+        <tr>
+          <td colSpan={colonnes} style={{ background: '#FFF6D6' }}>
+            <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <strong style={{ fontSize: '.9rem' }}>
+                Offrir {resa.places > 1 ? `les ${resa.places} repas` : 'le repas'} de {resa.nom}
+              </strong>
+              <select
+                aria-label="Motif" value={motif} onChange={(e) => setMotif(e.target.value)}
+                style={{ padding: '.45rem', border: '2px solid var(--noir)', fontFamily: 'inherit' }}
+              >
+                {MOTIFS_OFFERT.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              {motif === 'Autre' && (
+                <input
+                  aria-label="Précision" placeholder="Précision (ex. lot de la tombola)" value={motifLibre}
+                  onChange={(e) => setMotifLibre(e.target.value)}
+                  style={{ padding: '.45rem .6rem', border: '2px solid var(--noir)', fontFamily: 'inherit', minWidth: 200 }}
+                />
+              )}
+              <button
+                className="btn btn-k btn-sm" disabled={pending}
+                onClick={() => start(async () => {
+                  const r = await offrirRepas(resa.id, motif === 'Autre' ? motifLibre : motif);
+                  if (r.erreur) setVerif(r.erreur);
+                  else { setOffre(false); setVerif(r.ok ?? 'Repas offert'); }
+                })}
+              >
+                Confirmer
+              </button>
+              <button className="btn btn-w btn-sm" onClick={() => setOffre(false)}>Annuler</button>
+            </div>
+            <div style={{ fontSize: '.78rem', color: '#6b6560', marginTop: '.5rem' }}>
+              Passe à 0 €, reste compté dans la jauge, au pointage et dans la liste traiteur.
+              {resa.statut === 'payee' && resa.montant_centimes > 0 && (
+                <> <strong>{euros(resa.montant_centimes)} déjà encaissés</strong> : à rembourser {resa.checkout_id ? 'depuis SumUp' : 'en main propre'}.</>
+              )}
+              {' '}Pour annuler ensuite : « Modifier », décocher « Repas offert ».
             </div>
           </td>
         </tr>

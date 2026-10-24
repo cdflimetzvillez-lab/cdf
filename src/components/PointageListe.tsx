@@ -124,7 +124,7 @@ export default function PointageListe({ reservations }: { reservations: Resa[] }
                 <div>
                   <div className="ptg-nom">
                     {r.nom}
-                    {r.benevole && <span style={{ fontSize: '.6rem', fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '.08em', marginLeft: '.5rem', padding: '.15rem .45rem', background: 'var(--jaune)', color: 'var(--noir)', verticalAlign: 'middle' }}>Bénévole</span>}
+                    {r.benevole && <span style={{ fontSize: '.6rem', fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '.08em', marginLeft: '.5rem', padding: '.15rem .45rem', background: 'var(--jaune)', color: 'var(--noir)', verticalAlign: 'middle' }}>Offert</span>}
                     {r.exposant && <span style={{ fontSize: '.6rem', fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '.08em', marginLeft: '.5rem', padding: '.15rem .45rem', background: '#9BD44F', color: 'var(--noir)', verticalAlign: 'middle' }}>Exposant</span>}
                   </div>
                   <div className="ptg-meta">

@@ -45,7 +45,7 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
 
       <div className="kpi">
         <div><b>{placesVendues + placesAEncaisser + repasBenevoles}</b><span>Places réservées</span></div>
-        {repasBenevoles > 0 && <div><b>{repasBenevoles}</b><span>Repas bénévoles (offerts)</span></div>}
+        {repasBenevoles > 0 && <div><b>{repasBenevoles}</b><span>Repas offerts</span></div>}
         <div><b>{euros(recette)}</b><span>Recette encaissée</span></div>
         <div>
           <b style={ecart > 0 ? { color: 'var(--evt-dark)' } : undefined}>{ecart > 0 ? `− ${euros(ecart)}` : euros(0)}</b>
@@ -78,7 +78,7 @@ export default async function Tresorerie({ searchParams }: { searchParams: Promi
                     {reservees}
                     {attente > 0 && <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {attente} à encaisser</div>}
                     {Number(s.places_benevoles ?? 0) > 0 && (
-                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {s.places_benevoles} repas bénévole{Number(s.places_benevoles) > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '.72rem', color: '#6b6560' }}>dont {s.places_benevoles} repas offert{Number(s.places_benevoles) > 1 ? 's' : ''}</div>
                     )}
                   </td>
                   <td data-l="Jauge" className="bloc">

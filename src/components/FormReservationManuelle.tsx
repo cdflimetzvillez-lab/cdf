@@ -80,7 +80,7 @@ export default function FormReservationManuelle({
 
   return (
     <div className="panel">
-      <h2>{exposant ? 'Ajouter un exposant' : benevole ? 'Bloquer des repas bénévoles' : 'Ajouter un participant'}</h2>
+      <h2>{exposant ? 'Ajouter un exposant' : benevole ? 'Bloquer des repas offerts' : 'Ajouter un participant'}</h2>
       {etat?.ok && <div className="msg ok">{etat.ok}</div>}
       {etat?.erreur && <div className="msg ko">{etat.erreur}</div>}
 
@@ -95,14 +95,15 @@ export default function FormReservationManuelle({
         </button>
         <button type="button" className={`btn btn-sm ${benevole ? 'btn-k' : 'btn-w'}`}
           onClick={() => { setType('benevole'); setEvenementId(''); vider(); }}>
-          Bénévole (repas offert)
+          Repas offert
         </button>
       </div>
       {benevole && (
         <p style={{ fontSize: '.85rem', color: '#6b6560', margin: '-.4rem 0 1rem' }}>
-          Les repas offerts aux bénévoles ne rapportent rien mais doivent être commandés au traiteur :
-          ils comptent dans les places réservées et dans la liste traiteur, à 0 €.
-          Tu peux saisir un nom par bénévole ou une seule ligne pour une équipe (ex. « Bénévoles buvette », 6 repas).
+          Bénévoles, gagnants d&apos;un jeu, invités : ces repas ne rapportent rien mais doivent être commandés au traiteur.
+          Ils comptent dans les places réservées et dans la liste traiteur, à 0 €.
+          Un nom par personne, ou une seule ligne pour une équipe (ex. « Bénévoles buvette », 6 repas).
+          Pour quelqu&apos;un déjà inscrit, utilise plutôt le bouton « Offrir » sur sa ligne.
         </p>
       )}
 
@@ -123,7 +124,7 @@ export default function FormReservationManuelle({
 
           <div className="row3">
             <div className="field">
-              <label htmlFor="rm-nom">{exposant ? 'Nom ou structure' : benevole ? 'Nom du bénévole ou de l\u2019équipe' : 'Nom et prénom'}</label>
+              <label htmlFor="rm-nom">{exposant ? 'Nom ou structure' : benevole ? 'Nom de la personne ou de l\u2019équipe' : 'Nom et prénom'}</label>
               <input id="rm-nom" name="nom" required minLength={2} autoComplete="off" />
             </div>
             <div className="field">
@@ -203,7 +204,7 @@ export default function FormReservationManuelle({
           )}
 
           <div className="field">
-            <label htmlFor="rm-com">{exposant ? 'Activité, produits vendus, remarque' : benevole ? 'Poste, remarque (facultatif)' : 'Remarque (facultatif)'}</label>
+            <label htmlFor="rm-com">{exposant ? 'Activité, produits vendus, remarque' : benevole ? 'Motif, poste (ex. bénévole buvette, gagnant de la roue)' : 'Remarque (facultatif)'}</label>
             <input id="rm-com" name="commentaire" autoComplete="off" />
           </div>
 

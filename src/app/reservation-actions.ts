@@ -423,6 +423,56 @@ export async function modifierReservation(id: string, fd: FormData): Promise<{ o
 /** Statuts depuis lesquels une place peut être confirmée (payée ou offerte). */
 const ENCAISSABLES_SERVEUR = ['en_attente', 'echouee', 'expiree'];
 
+/**
+ * Offre le repas d'une réservation existante (bénévole, gagnant d'un jeu, invité…).
+ * Passe à 0 €, confirmée, comptée pour le traiteur. Le motif est ajouté à la remarque.
+ */
+export async function offrirRepas(id: string, motif: string): Promise<{ ok?: string; erreur?: string }> {
+  const { isAdmin } = await requireAdmin('reservations');
+  if (!isAdmin) return { erreur: 'Accès refusé.' };
+
+  const db = createAdminClient();
+  const { data: resa } = await db
+    .from('reservations')
+    .select('id, nom, statut, montant_centimes, commentaire, exposant, benevole, mode_paiement, checkout_id, paye_le')
+    .eq('id', id)
+    .maybeSingle();
+  if (!resa) return { erreur: 'Réservation introuvable.' };
+  if (resa.exposant) return { erreur: 'Un exposant n’a pas de repas à offrir.' };
+  if (resa.benevole) return { erreur: 'Ce repas est déjà offert.' };
+
+  const texte = motif.trim().slice(0, 120);
+  const mention = texte ? `Offert : ${texte}` : 'Offert';
+  const dejaPaye = resa.statut === 'payee' && resa.montant_centimes > 0;
+  const aRembourser = dejaPaye ? resa.montant_centimes : 0;
+
+  const maj: Record<string, unknown> = {
+    benevole: true,
+    montant_centimes: 0,
+    commentaire: [resa.commentaire, mention].filter(Boolean).join(' · '),
+  };
+  if (ENCAISSABLES_SERVEUR.includes(resa.statut)) maj.statut = 'payee';
+  if (dejaPaye) {
+    // L'argent a été reçu : la réservation ne compte plus comme vente, le remboursement reste à faire.
+    maj.mode_paiement = null;
+    maj.paiement_ref = null;
+    maj.paye_le = null;
+  }
+
+  const { error } = await db.from('reservations').update(maj).eq('id', id);
+  if (error) return { erreur: erreurBase(error.message) };
+
+  revalidatePath('/admin/reservations');
+  revalidatePath('/admin/tresorerie');
+  revalidatePath('/admin/pointage/[id]', 'page');
+  const e = (c: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
+  return {
+    ok: aRembourser > 0
+      ? `Repas offert. ${e(aRembourser)} déjà encaissés : à rembourser à ${resa.nom}${resa.checkout_id ? ' depuis SumUp' : ' en main propre'}.`
+      : 'Repas offert, compté pour le traiteur.',
+  };
+}
+
 /** Admin : force une vérification auprès de SumUp pour une réservation (ou toutes celles en attente). */
 export async function verifierSumUpAdmin(reference?: string): Promise<{ verifiees: number; changees: number; erreur?: string }> {
   const { supabase, isAdmin } = await requireAdmin('reservations');
