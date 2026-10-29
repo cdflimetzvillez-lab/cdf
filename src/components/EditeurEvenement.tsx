@@ -176,6 +176,15 @@ export default function EditeurEvenement({ evenement, creneaux, infos, faq, docu
         <p style={{ color: '#6b6560', fontSize: '.85rem', margin: '-.8rem 0 1.2rem' }}>
           Nécessite une jauge totale. Affiche « Plus que X places » puis « Complet » sur la carte du programme.
         </p>
+        <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center', fontWeight: 600, marginBottom: '1.2rem' }}>
+          <input type="checkbox" name="liste_attente_active"
+            defaultChecked={e.liste_attente_active ?? false}
+            style={{ width: 20, height: 20 }} />
+          Proposer une liste d&apos;attente quand l&apos;événement est complet
+        </label>
+        <p style={{ color: '#6b6560', fontSize: '.85rem', margin: '-.8rem 0 1.2rem' }}>
+          Les visiteurs laissent leur email et le nombre de places souhaitées. Le comité reçoit un email et retrouve la liste dans Réservations &gt; Liste d&apos;attente.
+        </p>
 
         <div className="row3">
           <div className="field">

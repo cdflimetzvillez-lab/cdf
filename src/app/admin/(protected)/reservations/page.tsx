@@ -15,13 +15,14 @@ export default async function Reservations({
   const { supabase } = await requireAdmin('reservations');
 
   // Tous les événements : un exposant peut être saisi sur un événement sans billetterie.
-  const [{ data: evenements }, { data: suivi }, { data: tarifs }, { data: formules }] = await Promise.all([
+  const [{ data: evenements }, { data: suivi }, { data: tarifs }, { data: formules }, { count: nbAttente }] = await Promise.all([
     supabase.from('evenements')
       .select('id, titre, slug, places_max, prix_centimes, billetterie_active')
       .order('date_debut'),
     supabase.from('suivi_billetterie').select('*'),
     supabase.from('tarifs').select('id, evenement_id, libelle, prix_centimes').order('position'),
     supabase.from('formules_exposants').select('id, evenement_id, libelle, prix_centimes').order('position'),
+    supabase.from('liste_attente').select('id', { count: 'exact', head: true }).eq('statut', 'en_attente'),
   ]);
 
   let requete = supabase
@@ -53,6 +54,9 @@ export default async function Reservations({
           <p>Suivi des paiements (SumUp, espèces, chèques), pointage et liste d&apos;émargement.</p>
         </div>
         <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Link className={`btn btn-sm ${(nbAttente ?? 0) > 0 ? 'btn-y' : 'btn-w'}`} href="/admin/liste-attente">
+            Liste d&apos;attente{(nbAttente ?? 0) > 0 ? ` (${nbAttente})` : ''}
+          </Link>
           <VerifierSumUp nb={liste.filter((r) => r.statut === 'en_attente' && r.checkout_id).length} />
           <ExportCsv reservations={liste} evenements={evenements ?? []} />
         </div>

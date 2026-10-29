@@ -132,7 +132,7 @@ export default async function Home() {
                     {e.tarif?.trim() && <span className="price">{e.tarif}</span>}
                     {restantes.has(e.id) && (
                       restantes.get(e.id)! <= 0
-                        ? <span className="reste complet">Complet</span>
+                        ? <span className="reste complet">{e.liste_attente_active ? 'Complet · liste d\u2019attente' : 'Complet'}</span>
                         : <span className="reste">Plus que {restantes.get(e.id)} place{restantes.get(e.id)! > 1 ? 's' : ''}</span>
                     )}
                   </div>

@@ -45,6 +45,7 @@ export interface Evenement {
   places_par_reservation: number;
   cloture_reservations: string | null;
   afficher_places_restantes: boolean;
+  liste_attente_active: boolean;
   saison: Saison;
   image_url: string | null;
   publie: boolean;
@@ -68,6 +69,13 @@ export interface Demande {
   id: string; evenement_id: string | null; nom: string; email: string;
   telephone: string | null; type: string; message: string | null;
   statut: 'nouveau' | 'traite' | 'refuse'; created_at: string;
+}
+
+export interface ListeAttente {
+  id: string; evenement_id: string; nom: string; email: string;
+  telephone: string | null; places: number; message: string | null;
+  statut: 'en_attente' | 'contacte' | 'converti' | 'annule'; created_at: string;
+  evenements?: { titre: string; slug: string } | null;
 }
 
 export interface Reservation {

@@ -36,6 +36,7 @@ export const TOUS_LES_MODULES: ModuleCle[] = MODULES.map((m) => m.cle);
 /** Chemins rattachés à un autre module que celui de leur préfixe. */
 const CHEMINS_ANNEXES: { prefixe: string; cle: ModuleCle }[] = [
   { prefixe: '/admin/pointage', cle: 'reservations' },
+  { prefixe: '/admin/liste-attente', cle: 'reservations' },
 ];
 
 /** Module dont dépend une page de l'admin, d'après son chemin. null si la page est inconnue. */

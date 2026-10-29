@@ -8,6 +8,7 @@ import Marquee from '@/components/Marquee';
 import Footer from '@/components/Footer';
 import FormulaireDemande from '@/components/FormulaireDemande';
 import FormulaireReservation from '@/components/FormulaireReservation';
+import FormulaireListeAttente from '@/components/FormulaireListeAttente';
 import GalerieEvenement from '@/components/GalerieEvenement';
 import { jourMois, horaires, dateLongue, periode, texteSur } from '@/lib/format';
 import type { Evenement, Creneau, InfoBloc, FaqItem, SiteSettings } from '@/lib/types';
@@ -73,6 +74,9 @@ export default async function PageEvenement(
   const { data: placesRestantes } = e.billetterie_active && e.places_max
     ? await supabase.rpc('places_restantes', { evt_id: e.id })
     : { data: null };
+
+  const complet = typeof placesRestantes === 'number' && placesRestantes <= 0;
+  const listeAttente = complet && e.liste_attente_active === true;
 
   const jm = jourMois(e.date_debut);
   const cr = (creneaux ?? []) as Creneau[];
@@ -191,7 +195,20 @@ export default async function PageEvenement(
         </section>
       )}
 
-      {e.billetterie_active ? (
+      {listeAttente ? (
+        <section className="take" id="reserver">
+          <div className="wrap take-grid">
+            <div>
+              <h2>C&apos;est complet !</h2>
+              <p style={{ marginTop: '1rem', fontWeight: 600, maxWidth: '44ch', lineHeight: 1.6 }}>
+                Il arrive que des places se libèrent. Inscrivez-vous sur la liste
+                d&apos;attente, on vous prévient dès qu&apos;un désistement tombe.
+              </p>
+            </div>
+            <FormulaireListeAttente evenementId={e.id} placesMax={e.places_par_reservation} />
+          </div>
+        </section>
+      ) : e.billetterie_active ? (
         <section className="take" id="reserver">
           <div className="wrap take-grid">
             <div>

@@ -46,6 +46,76 @@ export async function envoyerDemande(_prev: ActionState, fd: FormData): Promise<
   return { ok: 'Message envoyé. Le comité vous répond sous quelques jours.' };
 }
 
+/* ============ PUBLIC : liste d'attente (événement complet) ============ */
+export async function inscrireListeAttente(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const nom = String(fd.get('nom') ?? '').trim();
+  const email = String(fd.get('email') ?? '').trim().toLowerCase();
+  const telephone = String(fd.get('telephone') ?? '').trim();
+  const message = String(fd.get('message') ?? '').trim();
+  const places = Math.floor(Number(fd.get('places') ?? 1));
+  const evenement_id = String(fd.get('evenement_id') ?? '');
+
+  if (!evenement_id) return { error: 'Événement inconnu.' };
+  if (!nom || !email) return { error: 'Le nom et l\'email sont obligatoires.' };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: 'Email invalide.' };
+  if (!Number.isFinite(places) || places < 1 || places > 50) return { error: 'Nombre de places invalide.' };
+
+  const supabase = await createClient();
+  const { data: evt } = await supabase.from('evenements')
+    .select('id, titre, liste_attente_active').eq('id', evenement_id).eq('publie', true).maybeSingle();
+  if (!evt || !evt.liste_attente_active) return { error: 'La liste d\'attente n\'est pas ouverte pour cet événement.' };
+
+  const { error } = await supabase.from('liste_attente').insert({
+    evenement_id, nom, email, telephone: telephone || null, places, message: message || null,
+  });
+  if (error) return { error: "L'inscription a échoué. Réessayez ou écrivez-nous directement." };
+
+  if (process.env.RESEND_API_KEY) {
+    const envoyer = (corps: Record<string, unknown>) =>
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(corps),
+      });
+    const from = 'Comité des Fêtes de Limetz-Villez <noreply@comitedesfetes-limetzvillez.fr>';
+    // Au comité
+    if (process.env.CONTACT_EMAIL) {
+      try {
+        await envoyer({
+          from, to: [process.env.CONTACT_EMAIL], reply_to: email,
+          subject: `Liste d'attente — ${evt.titre} — ${nom} (${places} place${places > 1 ? 's' : ''})`,
+          text: `Nouvelle inscription sur la liste d'attente.\n\nÉvénement : ${evt.titre}\nNom : ${nom}\nEmail : ${email}\nTéléphone : ${telephone || 'non renseigné'}\nPlaces souhaitées : ${places}\n\n${message || '(pas de message)'}\n\nÀ retrouver dans l'admin > Réservations > Liste d'attente.`,
+        });
+      } catch { /* l'inscription est enregistrée, l'email est un bonus */ }
+    }
+    // À la personne
+    try {
+      await envoyer({
+        from, to: [email], reply_to: process.env.CONTACT_EMAIL,
+        subject: `Liste d'attente — ${evt.titre}`,
+        text: `Bonjour ${nom},\n\nVotre demande pour ${places} place${places > 1 ? 's' : ''} à « ${evt.titre} » est bien enregistrée sur la liste d'attente.\n\nEn cas de désistement, nous vous contacterons par email ou par téléphone, dans l'ordre des inscriptions. Aucun paiement n'est demandé pour l'instant.\n\nLe Comité des Fêtes de Limetz-Villez`,
+      });
+    } catch { /* idem */ }
+  }
+
+  return { ok: `C'est noté ! Vous êtes sur la liste d'attente pour ${places} place${places > 1 ? 's' : ''}. Nous vous contacterons en cas de désistement.` };
+}
+
+/* ============ ADMIN : liste d'attente ============ */
+export async function changerStatutAttente(id: string, statut: string) {
+  const { supabase, isAdmin } = await requireAdmin('reservations');
+  if (!isAdmin) return;
+  await supabase.from('liste_attente').update({ statut }).eq('id', id);
+  revalidatePath('/admin/liste-attente');
+}
+
+export async function supprimerAttente(id: string) {
+  const { supabase, isAdmin } = await requireAdmin('reservations');
+  if (!isAdmin) return;
+  await supabase.from('liste_attente').delete().eq('id', id);
+  revalidatePath('/admin/liste-attente');
+}
+
 /* ============ ADMIN : réglages du site ============ */
 export async function majReglages(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const { supabase, isAdmin } = await requireAdmin('parametres');
@@ -124,6 +194,7 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
     places_par_reservation: Number(fd.get('places_par_reservation') ?? 10),
     cloture_reservations: String(fd.get('cloture_reservations') ?? '') || null,
     afficher_places_restantes: fd.get('afficher_places_restantes') === 'on',
+    liste_attente_active: fd.get('liste_attente_active') === 'on',
     saison: String(fd.get('saison') ?? 'ete'),
     image_url: String(fd.get('image_url') ?? '').trim() || null,
     publie: fd.get('publie') === 'on',
