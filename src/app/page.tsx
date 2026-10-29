@@ -129,7 +129,7 @@ export default async function Home() {
                     <p>{e.chapo}</p>
                   </div>
                   <div className="poster-foot">
-                    <span className="price">{e.tarif}</span>
+                    {e.tarif?.trim() && <span className="price">{e.tarif}</span>}
                     {restantes.has(e.id) && (
                       restantes.get(e.id)! <= 0
                         ? <span className="reste complet">Complet</span>
