@@ -167,6 +167,15 @@ export default function EditeurEvenement({ evenement, creneaux, infos, faq, docu
         <p style={{ color: '#6b6560', fontSize: '.85rem', margin: '.6rem 0 1.2rem' }}>
           Si désactivée, le lien externe ci-dessous est utilisé à la place.
         </p>
+        <label style={{ display: 'flex', gap: '.6rem', alignItems: 'center', fontWeight: 600, marginBottom: '1.2rem' }}>
+          <input type="checkbox" name="afficher_places_restantes"
+            defaultChecked={e.afficher_places_restantes ?? false}
+            style={{ width: 20, height: 20 }} />
+          Afficher le nombre de places restantes sur la page d&apos;accueil
+        </label>
+        <p style={{ color: '#6b6560', fontSize: '.85rem', margin: '-.8rem 0 1.2rem' }}>
+          Nécessite une jauge totale. Affiche « Plus que X places » puis « Complet » sur la carte du programme.
+        </p>
 
         <div className="row3">
           <div className="field">

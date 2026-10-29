@@ -34,6 +34,17 @@ export default async function Home() {
   const s = settings as SiteSettings;
   const evts = (evenements ?? []) as Evenement[];
 
+  // Places restantes : uniquement pour les événements où l'admin a coché l'affichage (et avec une jauge).
+  const restantes = new Map<string, number>();
+  await Promise.all(
+    evts
+      .filter((e) => e.afficher_places_restantes && e.billetterie_active && e.places_max)
+      .map(async (e) => {
+        const { data } = await supabase.rpc('places_restantes', { evt_id: e.id });
+        if (typeof data === 'number') restantes.set(e.id, data);
+      }),
+  );
+
   // Thème du moment (Octobre Rose, Noël...) : actif et dans sa période, sinon rien ne change.
   const theme = themeDuJour(themes);
   const styleTheme = theme ? (variablesTheme(theme) as React.CSSProperties) : undefined;
@@ -117,7 +128,14 @@ export default async function Home() {
                     <h3>{e.titre}</h3>
                     <p>{e.chapo}</p>
                   </div>
-                  <span className="price">{e.tarif}</span>
+                  <div className="poster-foot">
+                    <span className="price">{e.tarif}</span>
+                    {restantes.has(e.id) && (
+                      restantes.get(e.id)! <= 0
+                        ? <span className="reste complet">Complet</span>
+                        : <span className="reste">Plus que {restantes.get(e.id)} place{restantes.get(e.id)! > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
                 </Link>
               );
             })}

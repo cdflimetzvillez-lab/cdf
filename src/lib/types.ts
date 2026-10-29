@@ -44,6 +44,7 @@ export interface Evenement {
   places_max: number | null;
   places_par_reservation: number;
   cloture_reservations: string | null;
+  afficher_places_restantes: boolean;
   saison: Saison;
   image_url: string | null;
   publie: boolean;

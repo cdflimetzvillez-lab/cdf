@@ -123,6 +123,7 @@ export async function enregistrerEvenement(_prev: ActionState, fd: FormData): Pr
     places_max: fd.get('places_max') ? Number(fd.get('places_max')) : null,
     places_par_reservation: Number(fd.get('places_par_reservation') ?? 10),
     cloture_reservations: String(fd.get('cloture_reservations') ?? '') || null,
+    afficher_places_restantes: fd.get('afficher_places_restantes') === 'on',
     saison: String(fd.get('saison') ?? 'ete'),
     image_url: String(fd.get('image_url') ?? '').trim() || null,
     publie: fd.get('publie') === 'on',
